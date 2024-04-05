@@ -5,7 +5,7 @@
 
 ## Overview
 
-This Object-Oriented Process-Based Crop Model is a pioneering effort spearheaded by Sajad Jamshidi, under the guidance of Dr. Diane Wang, within the ambit of an ambitious project targeting the development of a base generic plant model. This model is specifically designed to facilitate the exploration of Genotype by Environment (GxE) scenarios, thereby advancing our understanding of crop performance under varying conditions. Originating from a procedural crop model framework, this iteration of the model represents a significant leap forward, employing an object-oriented design to enhance modularity, scalability, and ease of adaptation.
+This Object-Oriented Process-Based Crop Model is a pioneering effort spearheaded by Sajad Jamshidi, under the guidance of Dr. Diane Wang, within the ambit of an ambitious project targeting the development of a base generic plant model. This model is specifically designed to facilitate the exploration of Genotype by Environment (GxE) scenarios, thereby advancing our understanding of crop performance under varying conditions. Originating from a procedural crop model framework, this iteration of the model represents a step forward, employing an object-oriented design to enhance modularity, scalability, and ease of adaptation.
 
 ## Key Features
 
