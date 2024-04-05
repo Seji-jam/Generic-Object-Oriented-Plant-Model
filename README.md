@@ -11,7 +11,7 @@ This Object-Oriented Process-Based Crop Model is a pioneering effort spearheaded
 
 - **Object-Oriented Design**: Incorporating key objects such as Soil, Atmosphere, Canopy, Leaf, and Root, alongside a controller for managing temporal inputs and outputs, this design paradigm enhances the model's flexibility and adaptability.
 - **Focus on C3 Crops**: The model currently specializes in simulating C3 crop processes, with provisioned placeholders for future extension to C4 crops, indicating a roadmap for comprehensive crop modeling.
-- **Continuous Development**: Initiated in January 2024, the model is in a state of ongoing development, reflecting a commitment to refinement and the incorporation of cutting-edge research findings.
+- **Continuous Development**: Initiated in January 2024, the model is in a state of ongoing development, reflecting a commitment to refinement.
 - **Open-Source Licensing**: Available under the MIT License, the model invites collaboration, modification, and extension by the global research community, fostering innovation and shared progress.
 
 ## License
