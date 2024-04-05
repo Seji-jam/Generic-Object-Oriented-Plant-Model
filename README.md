@@ -17,7 +17,7 @@ This Object-Oriented Process-Based Crop Model is a pioneering effort spearheaded
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE) file for details.
-For more information, queries, or suggestions, please contact Sajad Jamshidi or Dr. Diane Wang at their respective university email addresses.
+
 
 ---
 
