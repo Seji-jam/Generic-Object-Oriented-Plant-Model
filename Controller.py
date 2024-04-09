@@ -134,7 +134,7 @@ for day_data in weather_data:
     Canopy_object.calculate_thermal_units(Canopy_object.ds, tmax, tmin, Day_Length, BTemp_Phen, OTemp_Phen, CTemp_Phen, TempCurve_Res)
     Canopy_object.calculate_developement_rate(Canopy_object.ds, CropType_Photoperiod, Day_Length, StartPhotoperiod_Phase, EndPhotoperiod_Phase, Photoperiod_Sensitivity, MinThermal_Day_Veg, MinThermal_Day_Rep, Canopy_object.DailyThermalUnit)
        
-    Canopy_object.Initialize_Biomass_Formation()
+    Canopy_object.Initialize_Biomass_Formation(Canopy_object.LiveRoot_Carbon)
     
     Canopy_object.Initialize_Nitrogen_Accumulation()
     
