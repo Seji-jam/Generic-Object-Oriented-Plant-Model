@@ -12,6 +12,7 @@ Volumetric_Heat_Capacity_Air = 1200  # Volumetric heat capacity (J/m3/°C)
 Psychrometric_Constant = 0.067  # Psychrometric constant (kPa/°C)
 
 # Activation energies and other constants related to the Farquhar model
+O2_Concentration = 210  # Oxygen concentration (mmol/mol)
 Activation_Energy_VCMAX = 65330  # Energy of activation for VCMAX (J/mol)
 Activation_Energy_KMC = 79430  # Energy of activation for KMC (J/mol)
 Activation_Energy_KMO = 36380  # Energy of activation for KMO (J/mol)
@@ -223,18 +224,20 @@ class Leaf:
         Vapor_Pressure_Deficit_Leaf = max(0, Saturated_Vapor_Pressure_Leaf - VPD)
         
         # Constants based on crop type
-        Michaelis_Menten_CO2_25C = 650 if C3C4_Pathway == 1 else 404.9
-        Michaelis_Menten_O2_25C = 450 if C3C4_Pathway == 1 else 278.4
+        Michaelis_Menten_CO2_25C = 650 if C3C4_Pathway == -1 else 404.9
+        Michaelis_Menten_O2_25C = 450 if C3C4_Pathway == -1 else 278.4
         
         # Adjustment for temperature
         KMC = Michaelis_Menten_CO2_25C * np.exp((1./298. - 1./(Leaf_Temp + 273.)) * 79430 / 8.314)
         KMO = Michaelis_Menten_O2_25C * np.exp((1./298. - 1./(Leaf_Temp + 273.)) * 36380 / 8.314)
         
         # CO2 compensation point without dark respiration
-        GAMMAX = 0.5 * np.exp(-3.3801 + 5220./(Leaf_Temp + 273.) / 8.314) * 210 * KMC / KMO
-        RDVCX = 0.0089 * np.exp((1/298 - 1/(Leaf_Temp + 273)) * (46390 - 65330) / 8.314)
-        GAMMA = (GAMMAX + RDVCX * KMC * (1 + 210 / KMO)) / (1 - RDVCX) / (10 if C3C4_Pathway == 1 else 1)
-        Intercellular_CO2_Ratio = 1 - (1 - GAMMA / Ambient_CO2) * (0.14 + VPD_Slope * Vapor_Pressure_Deficit_Leaf)
+        CO2_compensation_point_no_resp = 0.5 * np.exp(-3.3801 + 5220./(Leaf_Temp + 273.) / 8.314) * 210 * KMC / KMO
+        dark_respiration_Vcmax_ratio  = Dark_Respiration_VCMAX_Ratio_25C * np.exp((1/298 - 1/(Leaf_Temp + 273)) * (46390 - 65330) / 8.314)
+        CO2_compensation_point_conditional =(CO2_compensation_point_no_resp + dark_respiration_Vcmax_ratio * KMC * (1 + 210 / KMO)) / (1 - dark_respiration_Vcmax_ratio) 
+        CO2_compensation_point =  CO2_compensation_point_conditional/10 if C3C4_Pathway == -1 else CO2_compensation_point_conditional
+        
+        Intercellular_CO2_Ratio = 1 - (1 - CO2_compensation_point / Ambient_CO2) * (0.14 + VPD_Slope * Vapor_Pressure_Deficit_Leaf)
         
         # Intercellular CO2 concentration
         Intercellular_CO2 = Intercellular_CO2_Ratio * Ambient_CO2
@@ -261,9 +264,8 @@ class Leaf:
                  , JMAX_LeafN_Slope,    Photosynthetic_Light_Response_Factor):
        
         # Constants and initial calculations for both C3 and C4 plants, adapted for temperature
-        O2_Concentration = 210  # Oxygen concentration (mmol/mol)
-        Michaelis_Menten_CO2_25C = 650 if C3C4_Pathway < 0 else 404.9  # Michaelis-Menten constant for CO2 at 25°C, adjusted for C3/C4
-        Michaelis_Menten_O2_25C = 450 if C3C4_Pathway < 0 else 278.4  # Michaelis-Menten constant for O2 at 25°C, adjusted for C3/C4
+        Michaelis_Menten_CO2_25C = 650 if C3C4_Pathway == -1 else 404.9  # Michaelis-Menten constant for CO2 at 25°C, adjusted for C3/C4
+        Michaelis_Menten_O2_25C = 450 if C3C4_Pathway == -1 else 278.4  # Michaelis-Menten constant for O2 at 25°C, adjusted for C3/C4
         
 
         
@@ -293,7 +295,7 @@ class Leaf:
          # Assumption for electron transport
         Pseudocyclic_Electron_Transport = 0  # Assuming no pseudocyclic electron transport
 
-        if C3C4_Pathway < 0:
+        if C3C4_Pathway == -1:
             CO2_Leakage_Factor = 0.2  # CO2 leakage from bundle-sheath to mesophyll in C4 plants
             Concentrated_CO2 = 10 * Intercellular_CO2  # Mimicking C4 CO2 concentrating mechanism
             Scarcity_Factor = 2 * (Concentrated_CO2 - CO2_Compensation_No_Respiration) / (1. - CO2_Leakage_Factor)
@@ -429,7 +431,7 @@ class Leaf_sunlit(Leaf):
             Atmospheric_Transmissivity = Incoming_PAR / (0.5 * Solar_Constant * Sin_Beam)
 
             # Calculation of Vapor Pressure Deficit effect
-            Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway < 0 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-leaf vapour pressure deficit)
+            Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway == -1 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-leaf vapour pressure deficit)
             Sat_Vapor_Pressure, Intercellular_CO2 = Leaf.INTERNAL_CO2(Hourly_Temp, Vapour_Pressure, Vapor_Pressure_Deficit_Response, self.leaf_object.Ambient_CO2, self.leaf_object.C3C4_Pathway)
     
             
@@ -564,7 +566,7 @@ class Leaf_sunlit(Leaf):
             
             
             # Adjusting for vapor pressure deficit influence on intercellular CO2 concentration
-            Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway < 0 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-leaf vapour pressure deficit)
+            Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway == -1 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-leaf vapour pressure deficit)
             Sat_Vapor_Pressure, Intercellular_CO2_Concentration = Leaf.INTERNAL_CO2(Sunlit_Leaf_Temp, Vapour_Pressure, Vapor_Pressure_Deficit_Response, self.leaf_object.Ambient_CO2, self.leaf_object.C3C4_Pathway)
             
             # Calculating photosynthetic nitrogen availability for sunlit canopy parts
@@ -624,7 +626,7 @@ class Leaf_sunlit(Leaf):
             NIR = 0.5 * Solar_Radiation
             
             # Calculation of Vapor Pressure Deficit effect
-            Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway < 0 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-leaf vapour pressure deficit)
+            Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway == -1 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-leaf vapour pressure deficit)
             Sat_Vapor_Pressure, Intercellular_CO2 = Leaf.INTERNAL_CO2(Sunlit_Leaf_Temp, Vapour_Pressure, Vapor_Pressure_Deficit_Response, self.leaf_object.Ambient_CO2, self.leaf_object.C3C4_Pathway)
     
             # Incoming Diffuse and Direct NIR (Near-Infrared Radiation)
@@ -781,7 +783,7 @@ class Leaf_sunlit(Leaf):
             Direct_PAR = PAR - Diffuse_PAR
             
             # Adjusting for vapor pressure deficit's impact on intercellular CO2 concentration
-            Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway < 0 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-leaf vapour pressure deficit)
+            Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway == -1 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-leaf vapour pressure deficit)
             
             # Extinction coefficients for sunlight penetration through the canopy
             Leaf_Blade_Angle_Radians = self.leaf_object.Leaf_Blade_Angle * np.pi / 180
@@ -864,7 +866,7 @@ class Leaf_Shaded(Leaf):
             NIR = 0.5 * Solar_Radiation
             Atmospheric_Transmissivity = Incoming_PAR / (0.5 * Solar_Constant * Sin_Beam)
         
-            Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway < 0 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-leaf vapour pressure deficit)
+            Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway == -1 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-leaf vapour pressure deficit)
             Sat_Vapor_Pressure, Intercellular_CO2 = Leaf.INTERNAL_CO2(Hourly_Temp, Vapour_Pressure, Vapor_Pressure_Deficit_Response, self.leaf_object.Ambient_CO2_Concentration, self.leaf_object.C3C4_Pathway)
         
             Vapour_Pressure_Deficit = max(0, Sat_Vapor_Pressure - Vapour_Pressure)
@@ -995,16 +997,14 @@ class Leaf_Shaded(Leaf):
             Direct_Beam_Extinction_Coefficient = Leaf.KDR_Coeff(Sin_Beam, Leaf_Blade_Angle_Radians)
             
             
-            Scattering_Coefficient_PAR = 0.2  # Leaf scattering coefficient for PAR
         
             Diffuse_Extinction_Coefficient_PAR = Leaf.KDF_Coeff(Total_LAI, Leaf_Blade_Angle_Radians, Scattering_Coefficient_PAR)
         
             Scattered_Beam_Extinction_Coefficient_PAR, Canopy_Beam_Reflection_Coefficient_PAR = Leaf.REFLECTION_Coeff(Scattering_Coefficient_PAR, Direct_Beam_Extinction_Coefficient)
         
-            Canopy_Diffuse_Reflection_Coefficient_PAR = 0.057  # Canopy diffuse PAR reflection coefficient
         
             # Adjusting for vapor pressure deficit influence on intercellular CO2 concentration
-            Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway < 0 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-leaf vapour pressure deficit)
+            Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway ==-1 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-leaf vapour pressure deficit)
             Sat_Vapor_Pressure, Intercellular_CO2_Concentration = Leaf.INTERNAL_CO2(Shaded_Leaf_Temp, Vapour_Pressure, Vapor_Pressure_Deficit_Response, self.leaf_object.Ambient_CO2, self.leaf_object.C3C4_Pathway)
         
             # Calculating photosynthetic nitrogen availability for shaded canopy parts
@@ -1102,7 +1102,7 @@ class Leaf_Shaded(Leaf):
             Shaded_Leaf_Boundary_Layer_Resistance_Heat = 1. / Shaded_Leaf_Boundary_Layer_Resistance_Heat
             Shaded_Leaf_Boundary_Layer_Resistance_Water = 0.93 * Shaded_Leaf_Boundary_Layer_Resistance_Heat
             
-            Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway < 0 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-leaf vapour pressure deficit)
+            Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway == -1 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-leaf vapour pressure deficit)
 
             Saturation_Vapor_Pressure, Intercellular_CO2_Concentration = Leaf.INTERNAL_CO2(Hourly_Temperature, Vapour_Pressure, Vapor_Pressure_Deficit_Response, self.leaf_object.Ambient_CO2, self.leaf_object.C3C4_Pathway)
             Adjusted_Saturation_Vapor_Pressure, Adjusted_Intercellular_CO2_Concentration = Leaf.INTERNAL_CO2(Shaded_Leaf_Temp, Vapour_Pressure, Vapor_Pressure_Deficit_Response, self.leaf_object.Ambient_CO2, self.leaf_object.C3C4_Pathway)
@@ -1219,7 +1219,7 @@ class Leaf_Shaded(Leaf):
             Diffuse_PAR = Incoming_PAR * Diffuse_Light_Fraction
             Direct_PAR = Incoming_PAR - Diffuse_PAR
 
-            Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway < 0 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-leaf vapour pressure deficit)
+            Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway == -1 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-leaf vapour pressure deficit)
             
             Leaf_Blade_Angle_Radians = self.leaf_object.Leaf_Blade_Angle * np.pi / 180
             Direct_Beam_Extinction_Coefficient = Leaf.KDR_Coeff(Sin_Solar_Declination, Leaf_Blade_Angle_Radians)
