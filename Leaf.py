@@ -11,6 +11,25 @@ Latent_Heat_Vaporization = 2.4E6  # Latent heat of water vaporization (J/kg)
 Volumetric_Heat_Capacity_Air = 1200  # Volumetric heat capacity (J/m3/°C)
 Psychrometric_Constant = 0.067  # Psychrometric constant (kPa/°C)
 
+# Activation energies and other constants related to the Farquhar model
+Activation_Energy_VCMAX = 65330  # Energy of activation for VCMAX (J/mol)
+Activation_Energy_KMC = 79430  # Energy of activation for KMC (J/mol)
+Activation_Energy_KMO = 36380  # Energy of activation for KMO (J/mol)
+Activation_Energy_Dark_Respiration = 46390  # Energy of activation for dark respiration (J/mol)
+Deactivation_Energy_JMAX = 200000  # Energy of deactivation for JMAX (J/mol)
+Entropy_Term_JT_Equation = 650  # Entropy term in JT equation (J/mol/K)
+Maximum_Electron_Transport_Efficiency = 0.85  # Maximum electron transport efficiency of PS II
+Protons_For_ATP_Synthesis = 3  # Number of protons required to synthesize 1 ATP
+Dark_Respiration_VCMAX_Ratio_25C = 0.0089  
+
+
+
+Scattering_Coefficient_PAR = 0.2  # Leaf scattering coefficient for PAR
+Scattering_Coefficient_NIR = 0.8  # Leaf scattering coefficient for NIR
+Canopy_Diffuse_Reflection_Coefficient_PAR = 0.057  # Canopy diffuse PAR reflection coefficient
+Canopy_Diffuse_Reflection_Coefficient_NIR = 0.389  # Canopy diffuse NIR reflection coefficient
+
+
 ##self.Plant_Height ... take care of Plant_Height because it's should be comming from canopy
 class Leaf: 
     def __init__(self,  Spec_Leaf_Area, LAI_ini, Leaf_Blade_Angle, Leaf_Width, Min_Spec_Leaf_N, C3C4_Pathway, Ambient_CO2, Activation_Energy_JMAX,
@@ -246,17 +265,7 @@ class Leaf:
         Michaelis_Menten_CO2_25C = 650 if C3C4_Pathway < 0 else 404.9  # Michaelis-Menten constant for CO2 at 25°C, adjusted for C3/C4
         Michaelis_Menten_O2_25C = 450 if C3C4_Pathway < 0 else 278.4  # Michaelis-Menten constant for O2 at 25°C, adjusted for C3/C4
         
-        # Activation energies and other constants related to the Farquhar model
-        Activation_Energy_VCMAX = 65330  # Energy of activation for VCMAX (J/mol)
-        Activation_Energy_KMC = 79430  # Energy of activation for KMC (J/mol)
-        Activation_Energy_KMO = 36380  # Energy of activation for KMO (J/mol)
-        Activation_Energy_Dark_Respiration = 46390  # Energy of activation for dark respiration (J/mol)
-        Deactivation_Energy_JMAX = 200000  # Energy of deactivation for JMAX (J/mol)
-        Entropy_Term_JT_Equation = 650  # Entropy term in JT equation (J/mol/K)
-        Maximum_Electron_Transport_Efficiency = 0.85  # Maximum electron transport efficiency of PS II
-        Protons_For_ATP_Synthesis = 3  # Number of protons required to synthesize 1 ATP
 
-        
         
         # Conversion of absorbed PAR to photon flux density
         Photon_Flux_Density = 4.56 * Absorbed_PAR  # Conversion factor to umol/m^2/s
@@ -311,7 +320,6 @@ class Leaf:
         Gross_Leaf_Photosynthesis = max(1E-10, (1E-6) * 44 * Photosynthesis_Efficiency)
     
         # Rate of leaf dark respiration
-        Dark_Respiration_VCMAX_Ratio_25C = 0.0089  # Bas
         
         Temporary_var = math.exp((1/298 - 1/(Leaf_Temp + 273)) * Activation_Energy_Dark_Respiration / 8.314)
         Leaf_Dark_Respiration = (1E-6) * 44 * Dark_Respiration_VCMAX_Ratio_25C * (VCMAX_LeafN_Slope * Leaf_N_Content) * Temporary_var
@@ -400,7 +408,8 @@ class Leaf_sunlit(Leaf):
     def __init__(self, leaf_object):
         self.leaf_object = leaf_object
         
-    def Calculate_leaf_temp(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Vapour_Pressure, Wind, Plant_Height):
+    def Calculate_leaf_temp(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, 
+                            Solar_Radiation, Max_Temp, Min_Temp, Vapour_Pressure, Wind, Plant_Height,C3C4_Pathway):
         # Using updated attributes
         Total_LAI = self.leaf_object.leaf_area_output['Total_LAI']
         Leaf_Area_Index = self.leaf_object.leaf_area_output['Final_LAI']
@@ -418,6 +427,19 @@ class Leaf_sunlit(Leaf):
             Incoming_NIR = 0.5 * Solar_Radiation
 
             Atmospheric_Transmissivity = Incoming_PAR / (0.5 * Solar_Constant * Sin_Beam)
+
+            # Calculation of Vapor Pressure Deficit effect
+            Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway < 0 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-leaf vapour pressure deficit)
+            Sat_Vapor_Pressure, Intercellular_CO2 = Leaf.INTERNAL_CO2(Hourly_Temp, Vapour_Pressure, Vapor_Pressure_Deficit_Response, self.leaf_object.Ambient_CO2, self.leaf_object.C3C4_Pathway)
+    
+            
+            # Dynamic slope calculation for the response of saturation vapor pressure to temperature
+            Vapour_Pressure_Deficit = max(0, Sat_Vapor_Pressure - Vapour_Pressure)
+            Slope_SVP = 4158.6 * Sat_Vapor_Pressure / (Hourly_Temp + 239.)**2
+
+
+
+
 
             # Calculation of diffuse light fraction based on atmospheric transmissivity
             if Atmospheric_Transmissivity < 0.22:
@@ -442,8 +464,7 @@ class Leaf_sunlit(Leaf):
             Leaf_Blade_Angle_Radians = self.leaf_object.Leaf_Blade_Angle * np.pi / 180
             Direct_Beam_Extinction_Coefficient = Leaf.KDR_Coeff(Sin_Beam, Leaf_Blade_Angle_Radians)
             
-            Scattering_Coefficient_PAR = 0.2  # Leaf scattering coefficient for PAR
-            Scattering_Coefficient_NIR = 0.8  # Leaf scattering coefficient for NIR
+
             
             Diffuse_Extinction_Coefficient_PAR = Leaf.KDF_Coeff(Total_LAI, Leaf_Blade_Angle_Radians, Scattering_Coefficient_PAR)
             Diffuse_Extinction_Coefficient_NIR = Leaf.KDF_Coeff(Total_LAI, Leaf_Blade_Angle_Radians, Scattering_Coefficient_NIR)
@@ -451,8 +472,7 @@ class Leaf_sunlit(Leaf):
             Scattered_Beam_Extinction_Coefficient_PAR, Canopy_Beam_Reflection_Coefficient_PAR = Leaf.REFLECTION_Coeff(Scattering_Coefficient_PAR, Direct_Beam_Extinction_Coefficient)
             Scattered_Beam_Extinction_Coefficient_NIR, Canopy_Beam_Reflection_Coefficient_NIR = Leaf.REFLECTION_Coeff(Scattering_Coefficient_NIR, Direct_Beam_Extinction_Coefficient)
             
-            Canopy_Diffuse_Reflection_Coefficient_PAR = 0.057  # Canopy diffuse PAR reflection coefficient
-            Canopy_Diffuse_Reflection_Coefficient_NIR = 0.389  # Canopy diffuse NIR reflection coefficient
+
             
                         
             # Calculating photosynthetic nitrogen for sunlit canopy parts
@@ -484,7 +504,11 @@ class Leaf_sunlit(Leaf):
             Stomatal_Resistance_Sunlit = max(1E-30, 1 / Potential_CO2_Conductance_Sunlit - Boundary_Layer_Resistance_Water_Sunlit * 1.3 - Turbulence_Resistance) / 1.6
             
             # Applying Penman-Monteith equation to calculate transpiration and net radiation absorbed
-            Transpiration_Sunlit, Net_Radiation_Absorbed_Sunlit = Leaf.Penman_Monteith(Stomatal_Resistance_Sunlit, Turbulence_Resistance, Boundary_Layer_Resistance_Water_Sunlit, Boundary_Layer_Resistance_Heat_Sunlit_Adjusted, Total_Absorbed_Radiation_Sunlit, Atmospheric_Transmissivity, Sunlit_Fraction, Hourly_Temp, Vapour_Pressure, SVP_Slope, Vapour_Pressure_Deficit)
+            Transpiration_Sunlit, Net_Radiation_Absorbed_Sunlit = Leaf.Penman_Monteith(Stomatal_Resistance_Sunlit, Turbulence_Resistance,
+                                                                                       Boundary_Layer_Resistance_Water_Sunlit, Boundary_Layer_Resistance_Heat_Sunlit_Adjusted,
+                                                                                       Total_Absorbed_Radiation_Sunlit, Atmospheric_Transmissivity,
+                                                                                       Sunlit_Fraction, Hourly_Temp, Vapour_Pressure, 
+                                                                                       Slope_SVP, Vapour_Pressure_Deficit)
             
             # Calculating leaf temperature difference
             Air_Leaf_Temp_Diff_Sunlit = (Net_Radiation_Absorbed_Sunlit - Latent_Heat_Vaporization * Transpiration_Sunlit) * (Boundary_Layer_Resistance_Heat_Sunlit_Adjusted + (Turbulence_Resistance * Sunlit_Fraction)) / Volumetric_Heat_Capacity_Air
