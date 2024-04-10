@@ -6,14 +6,17 @@ def SWITCH_FUN(x, y1, y2):
     return y1 if x < 0 else y2
 wgauss = np.array([0.1184635, 0.2393144, 0.2844444, 0.2393144, 0.1184635])
 class Soil:
-    def __init__(self, Residual_Water_Content, Saturated_Water_Content, temperature_change_constant, lodging_condition,
-                 Soil_Depth_1, initial_soil_temp, initial_decomposable_plant_material, field_capacity_water_content, clay_percentage, residual_ammonium,
-                 residual_nitrate, dpm_decomposition_rate, rpm_decomposition_rate,
+    def __init__(self, Residual_Water_Content, Saturated_Water_Content, temperature_change_constant,  field_capacity_water_content, 
+                 lodging_condition,
+                 Soil_Depth_1,clay_percentage,sand_percentage,
+                  initial_soil_temp, initial_decomposable_plant_material,initial_ammonium_content, initial_nitrate_content,
+                  residual_ammonium,
+                 residual_nitrate, dpm_decomposition_rate, rpm_decomposition_rate,plant_material_dpm_rpm_ratio,
                  biomass_incorporation_rate, humification_rate, total_organic_carbon, biochar_carbon_content,
-                 biochar_conversion_fraction, parameter_adjustment_multiplier, initial_ammonium_content, initial_nitrate_content,
+                 biochar_conversion_fraction, parameter_adjustment_multiplier, 
                  nitrogen_stress_water_index, water_supply_switch, daily_water_input, ammonium_nitrogen_input_rate,
-                 nitrate_nitrogen_input_rate, plant_material_dpm_rpm_ratio, soil_resistance_to_evaporation,
-                 sand_percentage):
+                 nitrate_nitrogen_input_rate, soil_resistance_to_evaporation):
+        
         self.Residual_Water_Content = Residual_Water_Content  # Residual water content
         self.Saturated_Water_Content = Saturated_Water_Content  # Saturated water content
         self.temperature_change_constant = temperature_change_constant
