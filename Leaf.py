@@ -520,7 +520,8 @@ class Leaf_sunlit(Leaf):
         self.leaf_object.hourly_SU_leaf_T=hourly_Sunlit_Leaf_Temp
         self.leaf_object.hourly_Air_SU_leaf_T_diff=hourly_Air_Leaf_Temp_Diff             
         
-    def Calculate_Potential_Photosynthesis(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Vapour_Pressure, Wind_Noon_Max):
+    def Calculate_Potential_Photosynthesis(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, 
+                                           Solar_Radiation, Max_Temp, Min_Temp, Vapour_Pressure, Wind_Noon_Max,C3C4_Pathway):
         # Use updated attributes
         Total_LAI_ini = self.leaf_object.leaf_area_output['Total_LAI_ini']
         Final_LAI = self.leaf_object.leaf_area_output['Final_LAI']
@@ -556,17 +557,14 @@ class Leaf_sunlit(Leaf):
             
             Leaf_Blade_Angle_Radians = self.leaf_object.Leaf_Blade_Angle * np.pi / 180
             Direct_Beam_Extinction_Coefficient = Leaf.KDR_Coeff(Sin_Beam, Leaf_Blade_Angle_Radians)
-            
-            Scattering_Coefficient_PAR = 0.2  # Leaf scattering coefficient for PAR
-            
+                        
             Diffuse_Extinction_Coefficient_PAR = Leaf.KDF_Coeff(Total_LAI_ini, Leaf_Blade_Angle_Radians, Scattering_Coefficient_PAR)
             
             Scattered_Beam_Extinction_Coefficient_PAR, Canopy_Beam_Reflection_Coefficient_PAR = Leaf.REFLECTION_Coeff(Scattering_Coefficient_PAR, Direct_Beam_Extinction_Coefficient)
             
-            Canopy_Diffuse_Reflection_Coefficient_PAR = 0.057  # Canopy diffuse PAR reflection coefficient
             
             # Adjusting for vapor pressure deficit influence on intercellular CO2 concentration
-            Vapor_Pressure_Deficit_Response =  0.116214  # Slope for linear effect of VPD on Ci/Ca
+            Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway < 0 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-leaf vapour pressure deficit)
             Sat_Vapor_Pressure, Intercellular_CO2_Concentration = Leaf.INTERNAL_CO2(Sunlit_Leaf_Temp, Vapour_Pressure, Vapor_Pressure_Deficit_Response, self.leaf_object.Ambient_CO2, self.leaf_object.C3C4_Pathway)
             
             # Calculating photosynthetic nitrogen availability for sunlit canopy parts
@@ -598,7 +596,8 @@ class Leaf_sunlit(Leaf):
                 
         
     
-    def Calculate_Potential_Transpiration(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Vapour_Pressure, Wind_Noon_Max, Plant_Height):
+    def Calculate_Potential_Transpiration(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, 
+                                          Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Vapour_Pressure, Wind_Noon_Max, Plant_Height,C3C4_Pathway):
         # Utilizing updated attributes
         Total_LAI_ini = self.leaf_object.leaf_area_output['Total_LAI_ini']
         Final_LAI = self.leaf_object.leaf_area_output['Final_LAI']
@@ -625,7 +624,7 @@ class Leaf_sunlit(Leaf):
             NIR = 0.5 * Solar_Radiation
             
             # Calculation of Vapor Pressure Deficit effect
-            Vapor_Pressure_Deficit_Response =  0.116214
+            Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway < 0 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-leaf vapour pressure deficit)
             Sat_Vapor_Pressure, Intercellular_CO2 = Leaf.INTERNAL_CO2(Sunlit_Leaf_Temp, Vapour_Pressure, Vapor_Pressure_Deficit_Response, self.leaf_object.Ambient_CO2, self.leaf_object.C3C4_Pathway)
     
             # Incoming Diffuse and Direct NIR (Near-Infrared Radiation)
@@ -636,9 +635,7 @@ class Leaf_sunlit(Leaf):
             Leaf_Blade_Angle_Radians = self.leaf_object.Leaf_Blade_Angle * np.pi / 180
             Direct_Beam_Extinction_Coefficient = Leaf.KDR_Coeff(Sin_Beam, Leaf_Blade_Angle_Radians)
             
-            # Scattering Coefficients for PAR and NIR
-            Scattering_Coefficient_PAR = 0.2  # Leaf scattering coefficient for PAR
-            Scattering_Coefficient_NIR = 0.8  # Leaf scattering coefficient for NIR
+
             
             # Diffuse Extinction Coefficients for PAR and NIR
             Diffuse_Extinction_Coefficient_PAR = Leaf.KDF_Coeff(Total_LAI_ini, Leaf_Blade_Angle_Radians, Scattering_Coefficient_PAR)
@@ -647,10 +644,7 @@ class Leaf_sunlit(Leaf):
             # Reflection Coefficients for PAR and NIR
             Scattered_Beam_Extinction_Coefficient_PAR, Canopy_Beam_Reflection_Coefficient_PAR = Leaf.REFLECTION_Coeff(Scattering_Coefficient_PAR, Direct_Beam_Extinction_Coefficient)
             Scattered_Beam_Extinction_Coefficient_NIR, Canopy_Beam_Reflection_Coefficient_NIR = Leaf.REFLECTION_Coeff(Scattering_Coefficient_NIR, Direct_Beam_Extinction_Coefficient)
-            
-            # Canopy Diffuse Reflection Coefficients for PAR and NIR
-            Canopy_Diffuse_Reflection_Coefficient_PAR = 0.057
-            Canopy_Diffuse_Reflection_Coefficient_NIR = 0.389
+
             
             # Absorption of PAR and NIR by Sunlit Leaves
             Absorbed_PAR_Sunlit, _ = Leaf.LIGHT_ABSORB(Scattering_Coefficient_PAR, Direct_Beam_Extinction_Coefficient, Scattered_Beam_Extinction_Coefficient_PAR, Diffuse_Extinction_Coefficient_PAR, Canopy_Beam_Reflection_Coefficient_PAR, Canopy_Diffuse_Reflection_Coefficient_PAR, Direct_PAR, Diffuse_PAR, Final_LAI)
@@ -715,7 +709,9 @@ class Leaf_sunlit(Leaf):
         
         
         
-    def Update_LeafTemp_Photosynthesis_if_WaterStress(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Vapour_Pressure, Wind_Noon_Max, Plant_Height, Daily_Water_Supply, Soil_Depth_1, Root_Depth, hourly_Sunlit_Leaf_Temp, hourly_Shaded_Leaf_Temp, hourly_Soil_Evaporation):
+    def Update_LeafTemp_Photosynthesis_if_WaterStress(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure,
+                                                      Solar_Radiation, Max_Temp, Min_Temp, Vapour_Pressure, Wind_Noon_Max, Plant_Height, Daily_Water_Supply,
+                                                      Soil_Depth_1, Root_Depth, hourly_Sunlit_Leaf_Temp, hourly_Shaded_Leaf_Temp, hourly_Soil_Evaporation,C3C4_Pathway):
         Gaussian_Points = 5
         Gaussian_Weights = np.array([0.0469101, 0.2307534, 0.5000000, 0.7692465, 0.9530899])
     
@@ -785,18 +781,18 @@ class Leaf_sunlit(Leaf):
             Direct_PAR = PAR - Diffuse_PAR
             
             # Adjusting for vapor pressure deficit's impact on intercellular CO2 concentration
-            Vapor_Pressure_Deficit_Response =  0.116214
+            Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway < 0 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-leaf vapour pressure deficit)
             
             # Extinction coefficients for sunlight penetration through the canopy
             Leaf_Blade_Angle_Radians = self.leaf_object.Leaf_Blade_Angle * np.pi / 180
             Direct_Beam_Extinction_Coefficient = Leaf.KDR_Coeff(Sin_Beam, Leaf_Blade_Angle_Radians)
             
             # Scattering coefficient for PAR and adjustments for leaf and canopy level interactions
-            Scattering_Coefficient_PAR = 0.2
+
             Diffuse_Extinction_Coefficient_PAR = Leaf.KDF_Coeff(Final_LAI, Leaf_Blade_Angle_Radians, Scattering_Coefficient_PAR)
             Scattered_Beam_Extinction_Coefficient_PAR, Canopy_Beam_Reflection_Coefficient_PAR = Leaf.REFLECTION_Coeff(Scattering_Coefficient_PAR, Direct_Beam_Extinction_Coefficient)
             
-            Canopy_Diffuse_Reflection_Coefficient_PAR = 0.057
+
             
             # Calculating boundary layer resistance to heat and water vapor for sunlit leaves
             Boundary_Layer_Resistance_Heat_Flux = 0.01 * np.sqrt(Wind_Speed / self.leaf_object.Leaf_Width)
@@ -849,7 +845,8 @@ class Leaf_Shaded(Leaf):
     def __init__(self, leaf_object):
         self.leaf_object = leaf_object
         
-    def Calculate_leaf_temp(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Vapour_Pressure, Wind, Plant_Height):
+    def Calculate_leaf_temp(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation,
+                            Max_Temp, Min_Temp, Vapour_Pressure, Wind, Plant_Height,C3C4_Pathway):
         Total_LAI = self.leaf_object.leaf_area_output['Total_LAI']
         Leaf_Area_Index = self.leaf_object.leaf_area_output['Final_LAI']
         Wind_Extinction_Coeff = self.leaf_object.leaf_area_output['Ext_Coeff_Wind']
@@ -867,7 +864,7 @@ class Leaf_Shaded(Leaf):
             NIR = 0.5 * Solar_Radiation
             Atmospheric_Transmissivity = Incoming_PAR / (0.5 * Solar_Constant * Sin_Beam)
         
-            Vapor_Pressure_Deficit_Response = 0.116214 # Slope for the linear effect of VPD on Ci/Ca
+            Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway < 0 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-leaf vapour pressure deficit)
             Sat_Vapor_Pressure, Intercellular_CO2 = Leaf.INTERNAL_CO2(Hourly_Temp, Vapour_Pressure, Vapor_Pressure_Deficit_Response, self.leaf_object.Ambient_CO2_Concentration, self.leaf_object.C3C4_Pathway)
         
             Vapour_Pressure_Deficit = max(0, Sat_Vapor_Pressure - Vapour_Pressure)
@@ -959,7 +956,8 @@ class Leaf_Shaded(Leaf):
         self.leaf_object.hourly_Air_SH_leaf_T_diff=hourly_Air_Temperature_Difference_Shaded
 
 
-    def Calculate_Potential_Photosynthesis(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Daily_Solar_Radiation, Max_Temp, Min_Temp, Vapour_Pressure, Wind_Speed):
+    def Calculate_Potential_Photosynthesis(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure,
+                                           Daily_Solar_Radiation, Max_Temp, Min_Temp, Vapour_Pressure, Wind_Speed,C3C4_Pathway):
         # Use updated attributes for the calculations
         Total_LAI = self.leaf_object.leaf_area_output['Total_LAI']
         Leaf_Area_Index = self.leaf_object.leaf_area_output['Final_LAI']
@@ -1006,7 +1004,7 @@ class Leaf_Shaded(Leaf):
             Canopy_Diffuse_Reflection_Coefficient_PAR = 0.057  # Canopy diffuse PAR reflection coefficient
         
             # Adjusting for vapor pressure deficit influence on intercellular CO2 concentration
-            Vapor_Pressure_Deficit_Response = 0.116214  # Slope for linear effect of VPD on Ci/Ca
+            Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway < 0 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-leaf vapour pressure deficit)
             Sat_Vapor_Pressure, Intercellular_CO2_Concentration = Leaf.INTERNAL_CO2(Shaded_Leaf_Temp, Vapour_Pressure, Vapor_Pressure_Deficit_Response, self.leaf_object.Ambient_CO2, self.leaf_object.C3C4_Pathway)
         
             # Calculating photosynthetic nitrogen availability for shaded canopy parts
@@ -1032,7 +1030,8 @@ class Leaf_Shaded(Leaf):
         self.leaf_object.Daily_Potential_Photosynthesis_Shaded = Daily_Potential_Photosynthesis_Shaded
         self.leaf_object.Daily_Dark_Respiration_Shaded = Daily_Dark_Respiration_Shaded
               
-    def Calculate_Potential_Transpiration(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Vapour_Pressure, Wind_Speed, Plant_Height):
+    def Calculate_Potential_Transpiration(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure,
+                                          Solar_Radiation, Max_Temp, Min_Temp, Vapour_Pressure, Wind_Speed, Plant_Height,C3C4_Pathway):
         # Use updated attributes
         Total_LAI = self.leaf_object.leaf_area_output['Total_LAI_ini']
         Leaf_Area_Index = self.leaf_object.leaf_area_output['Final_LAI']
@@ -1053,7 +1052,7 @@ class Leaf_Shaded(Leaf):
         hourly_Absorbed_PAR_Shaded = []         
             
         
-        for (_, Hourly_Temperature, Sin_Beam, Diffuse_Ratio, Wind_Speed), Shaded_Leaf_Temp, Photosynthesis_Shaded, Dark_Respiration_Shaded in zip(hourly_conditions, hourly_Shaded_Leaf_Temp, hourly_Photosynthesis_Shaded, hourly_Dark_Respiration_Shaded):
+        for (Solar_Constant, Hourly_Temperature, Sin_Beam, Diffuse_Ratio, Wind_Speed), Shaded_Leaf_Temp, Photosynthesis_Shaded, Dark_Respiration_Shaded in zip(hourly_conditions, hourly_Shaded_Leaf_Temp, hourly_Photosynthesis_Shaded, hourly_Dark_Respiration_Shaded):
             
             Incoming_PAR = 0.5 * Solar_Radiation
             # Calculation of diffuse light fraction
@@ -1077,19 +1076,13 @@ class Leaf_Shaded(Leaf):
 
             Leaf_Blade_Angle_Radians = self.leaf_object.Leaf_Blade_Angle * np.pi / 180
             Direct_Beam_Extinction_Coefficient = Leaf.KDR_Coeff(Sin_Solar_Declination, Leaf_Blade_Angle_Radians)
-            
-            Scattering_Coefficient_PAR = 0.2  # Leaf scattering coefficient for PAR
-            Scattering_Coefficient_NIR = 0.8  # Leaf scattering coefficient for NIR
-            
+
             Diffuse_Extinction_Coefficient_PAR = Leaf.KDF_Coeff(Total_LAI, Leaf_Blade_Angle_Radians, Scattering_Coefficient_PAR)
             Diffuse_Extinction_Coefficient_NIR = Leaf.KDF_Coeff(Total_LAI, Leaf_Blade_Angle_Radians, Scattering_Coefficient_NIR)
             
             Scattered_Beam_Extinction_Coefficient_PAR, Canopy_Beam_Reflection_Coefficient_PAR = Leaf.REFLECTION_Coeff(Scattering_Coefficient_PAR, Direct_Beam_Extinction_Coefficient)
             Scattered_Beam_Extinction_Coefficient_NIR, Canopy_Beam_Reflection_Coefficient_NIR = Leaf.REFLECTION_Coeff(Scattering_Coefficient_NIR, Direct_Beam_Extinction_Coefficient)
-            
-            Canopy_Diffuse_Reflection_Coefficient_PAR = 0.057  # Canopy diffuse PAR reflection coefficient
-            Canopy_Diffuse_Reflection_Coefficient_NIR = 0.389  # Canopy diffuse NIR reflection coefficient
-            
+
             # Calculating the absorption of PAR and NIR by shaded leaves
             Absorbed_PAR_Shaded, _ = Leaf.LIGHT_ABSORB(Scattering_Coefficient_PAR, Direct_Beam_Extinction_Coefficient, Scattered_Beam_Extinction_Coefficient_PAR, Diffuse_Extinction_Coefficient_PAR, Canopy_Beam_Reflection_Coefficient_PAR, Canopy_Diffuse_Reflection_Coefficient_PAR, Direct_PAR, Diffuse_PAR, Leaf_Area_Index)
             Absorbed_NIR_Shaded, _ = Leaf.LIGHT_ABSORB(Scattering_Coefficient_NIR, Direct_Beam_Extinction_Coefficient, Scattered_Beam_Extinction_Coefficient_NIR, Diffuse_Extinction_Coefficient_NIR, Canopy_Beam_Reflection_Coefficient_NIR, Canopy_Diffuse_Reflection_Coefficient_NIR, Direct_NIR, Diffuse_NIR, Leaf_Area_Index)
@@ -1109,7 +1102,7 @@ class Leaf_Shaded(Leaf):
             Shaded_Leaf_Boundary_Layer_Resistance_Heat = 1. / Shaded_Leaf_Boundary_Layer_Resistance_Heat
             Shaded_Leaf_Boundary_Layer_Resistance_Water = 0.93 * Shaded_Leaf_Boundary_Layer_Resistance_Heat
             
-            Vapor_Pressure_Deficit_Response =  0.116214 # Slope for linear effect of VPD on Ci/Ca
+            Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway < 0 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-leaf vapour pressure deficit)
 
             Saturation_Vapor_Pressure, Intercellular_CO2_Concentration = Leaf.INTERNAL_CO2(Hourly_Temperature, Vapour_Pressure, Vapor_Pressure_Deficit_Response, self.leaf_object.Ambient_CO2, self.leaf_object.C3C4_Pathway)
             Adjusted_Saturation_Vapor_Pressure, Adjusted_Intercellular_CO2_Concentration = Leaf.INTERNAL_CO2(Shaded_Leaf_Temp, Vapour_Pressure, Vapor_Pressure_Deficit_Response, self.leaf_object.Ambient_CO2, self.leaf_object.C3C4_Pathway)
@@ -1155,7 +1148,7 @@ class Leaf_Shaded(Leaf):
     def Update_LeafTemp_Photosynthesis_if_WaterStress(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Vapour_Pressure, Wind_Speed, Plant_Height,
                                                       Daily_Water_Supply, Soil_Depth_1, Root_Depth,
                                                       hourly_Sunlit_Leaf_Temp, hourly_Shaded_Leaf_Temp,
-                                                      hourly_Soil_Evap):
+                                                      hourly_Soil_Evap,C3C4_Pathway):
     
         Gauss_Points = 5
         Gauss_Weights = np.array([0.0469101, 0.2307534, 0.5000000, 0.7692465, 0.9530899])
@@ -1226,17 +1219,15 @@ class Leaf_Shaded(Leaf):
             Diffuse_PAR = Incoming_PAR * Diffuse_Light_Fraction
             Direct_PAR = Incoming_PAR - Diffuse_PAR
 
-            Vapor_Pressure_Deficit_Response =  0.116214  # Slope for linear effect of VPD on Ci/Ca
+            Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway < 0 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-leaf vapour pressure deficit)
             
             Leaf_Blade_Angle_Radians = self.leaf_object.Leaf_Blade_Angle * np.pi / 180
             Direct_Beam_Extinction_Coefficient = Leaf.KDR_Coeff(Sin_Solar_Declination, Leaf_Blade_Angle_Radians)
             
-            Scattering_Coefficient_PAR = 0.2  # Leaf scattering coefficient for PAR
             
             Diffuse_Extinction_Coefficient_PAR = Leaf.KDF_Coeff(Leaf_Area_Index, Leaf_Blade_Angle_Radians, Scattering_Coefficient_PAR)
             Scattered_Beam_Extinction_Coefficient_PAR, Canopy_Beam_Reflection_Coefficient_PAR = Leaf.REFLECTION_Coeff(Scattering_Coefficient_PAR, Direct_Beam_Extinction_Coefficient)
             
-            Canopy_Diffuse_Reflection_Coefficient_PAR = 0.057
             
             Fraction_Sunlit = 1. / Direct_Beam_Extinction_Coefficient / Leaf_Area_Index * (1. - np.exp(-Direct_Beam_Extinction_Coefficient * Leaf_Area_Index))
             Fraction_Shaded = 1 - Fraction_Sunlit
