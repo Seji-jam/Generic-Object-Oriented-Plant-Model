@@ -59,11 +59,11 @@ class Canopy:
         self.InitCarbon_LivingVegBiomass = self.Plant_Density * self.Seed_Weight * self.CarbonFraction_Organs * self.GrowthEfficiency * self.CarbonAlloc_Shoot
         self.InitCarbon_ReproductiveTissues = self.Plant_Density * self.Seed_Weight * self.CarbonFraction_Organs * self.GrowthEfficiency * (1.0 - self.CarbonAlloc_Shoot)
         self.InitLeafAreaIndex = self.InitCarbon_LivingVegBiomass / self.CarbonFrac_Veg * self.SLA_Const
-        self.InitNitrogen_LivingVegBiomass = self.IniLeafN_Conc * self.InitCarbon_LivingVegBiomass / self.CarbonFrac_Veg
+        self.Nitrogen_InitialLeaf = self.IniLeafN_Conc * self.InitCarbon_LivingVegBiomass / self.CarbonFrac_Veg
         self.InitPlant_Height = self.MaxPlant_Height / 1000.0  # Converting to a different unit if necessary
         self.MinLeafN_Conc = self.SLA_Const * self.MinSLN_Photosyn
-        self.InitNitrogen_ReproductiveTissues = (self.Plant_Density * self.Seed_Weight * self.GrowthEfficiency * self.IniLeafN_Conc * self.CarbonAlloc_Shoot / self.NitrogenAlloc_Shoot) - self.InitNitrogen_LivingVegBiomass
-        self.InitSpecificLeafN_Biomass = self.InitNitrogen_LivingVegBiomass / self.InitLeafAreaIndex
+        self.InitNitrogen_ReproductiveTissues = (self.Plant_Density * self.Seed_Weight * self.GrowthEfficiency * self.IniLeafN_Conc * self.CarbonAlloc_Shoot / self.NitrogenAlloc_Shoot) - self.Nitrogen_InitialLeaf
+        self.InitSpecificLeafN_Biomass = self.Nitrogen_InitialLeaf / self.InitLeafAreaIndex
 
 
         # Actual canopy conditions
@@ -177,7 +177,7 @@ class Canopy:
         self.Nitrogen_Root = self.Nitrogen_InitialRoot
         self.Nitrogen_Stem = 0
         self.Nitrogen_Leaf = self.Nitrogen_InitialLeaf
-        self.TotalNitrogen_Leaf = self.Nitrogen_InitialLeaf
+        self.Tot_Leaf_N = self.Nitrogen_InitialLeaf
         self.Nitrogen_Seed = 0
         self.Nitrogen_DeadLeaf = 0
     
@@ -788,7 +788,7 @@ class Canopy:
         self.Nitrogen_Stem += self.Nitrogen_Stem_Rate
         self.Nitrogen_Leaf += self.Nitrogen_Leaf_Rate
         self.Nitrogen_Seed += self.Nitrogen_Seed_Rate
-        self.TotalNitrogen_Leaf += self.Nitrogen_Leaf_Rate_Positive
+        self.Tot_Leaf_N += self.Nitrogen_Leaf_Rate_Positive
         self.Nitrogen_DeadLeaf += self.Nitrogen_Leaf_Loss
     
         self.CarbonReserve_Shoot += self.ReserveCarbon_Shoot

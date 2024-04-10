@@ -5,18 +5,22 @@ import Canopy
 def SWITCH_FUN(x, y1, y2):
     return y1 if x < 0 else y2
 
+# Constants
+Stefan_Boltzmann_Const = 5.668E-8  # Stefan-Boltzmann constant (J/m2/s/K4)
+Latent_Heat_Vaporization = 2.4E6  # Latent heat of water vaporization (J/kg)
+Volumetric_Heat_Capacity_Air = 1200  # Volumetric heat capacity (J/m3/°C)
+Psychrometric_Constant = 0.067  # Psychrometric constant (kPa/°C)
 
 ##self.Plant_Height ... take care of Plant_Height because it's should be comming from canopy
 class Leaf: 
-    def __init__(self, Veg_C_Fraction, Spec_Leaf_Area, LAI_ini, Leaf_Blade_Angle, Leaf_Width, Tot_Leaf_N, Min_Spec_Leaf_N, Pathway_C3C4, Ambient_CO2, Activation_Energy_JMAX, VCMAX_LeafN_Slope, JMAX_LeafN_Slope, Photosynthetic_Light_Response_Factor):
-        self.Veg_C_Fraction = Veg_C_Fraction
+    def __init__(self,  Spec_Leaf_Area, LAI_ini, Leaf_Blade_Angle, Leaf_Width, Min_Spec_Leaf_N, C3C4_Pathway, Ambient_CO2, Activation_Energy_JMAX,
+                 VCMAX_LeafN_Slope, JMAX_LeafN_Slope, Photosynthetic_Light_Response_Factor ):
         self.Spec_Leaf_Area = Spec_Leaf_Area
         self.LAI_ini = LAI_ini
         self.Leaf_Blade_Angle = Leaf_Blade_Angle
         self.Leaf_Width = Leaf_Width
-        self.Tot_Leaf_N = Tot_Leaf_N
         self.Min_Spec_Leaf_N = Min_Spec_Leaf_N
-        self.Pathway_C3C4 = Pathway_C3C4
+        self.C3C4_Pathway = C3C4_Pathway
         self.Ambient_CO2 = Ambient_CO2
         self.Activation_Energy_JMAX = Activation_Energy_JMAX
         self.VCMAX_LeafN_Slope = VCMAX_LeafN_Slope
@@ -111,15 +115,15 @@ class Leaf:
         return Diffuse_Ext_Coeff
 
 
-    def Update_Leaf_Area(self):
+    def Update_Leaf_Area(self,Tot_Leaf_N,CarbonFrac_Veg):
 
         # Calculating delta and total leaf area index (LAI)
-        Delta_LAI = (self.Carb_Dead_Leaves - self.Carb_Leaves_to_Litters) / self.Veg_C_Fraction * self.Spec_Leaf_Area
-        Total_LAI = self.LAI_ini + self.Carb_Dead_Leaves / self.Veg_C_Fraction * self.Spec_Leaf_Area
+        Delta_LAI = (self.Carb_Dead_Leaves - self.Carb_Leaves_to_Litters) / CarbonFrac_Veg * self.Spec_Leaf_Area
+        Total_LAI = self.LAI_ini + self.Carb_Dead_Leaves / CarbonFrac_Veg * self.Spec_Leaf_Area
 
         # Nitrogen and light extinction coefficients
         Light_Ext_Coeff = Leaf.KDF_Coeff(Total_LAI, self.Leaf_Blade_Angle * np.pi / 180., 0.2)
-        Nitro_Ext_Coeff = Light_Ext_Coeff * (self.Tot_Leaf_N - self.Min_Spec_Leaf_N * Total_LAI)
+        Nitro_Ext_Coeff = Light_Ext_Coeff * (Tot_Leaf_N - self.Min_Spec_Leaf_N * Total_LAI)
         Nitro_Base_K = self.Min_Spec_Leaf_N * (1.0 - np.exp(-Light_Ext_Coeff * Total_LAI))
         
         # Assuming wind extinction coefficient is similar to light for simplicity
@@ -127,7 +131,7 @@ class Leaf:
         Leaf_Nitro_Ext_Coeff = 1.0 / Total_LAI * math.log((Nitro_Ext_Coeff + Nitro_Base_K) / (Nitro_Ext_Coeff * math.exp(-Light_Ext_Coeff * Total_LAI) + Nitro_Base_K))
 
         # Integrating LAI considering nitrogen effect
-        N_determined_LAI = math.log(1. + Leaf_Nitro_Ext_Coeff * max(0., self.Tot_Leaf_N) / self.Min_Spec_Leaf_N) / Leaf_Nitro_Ext_Coeff
+        N_determined_LAI = math.log(1. + Leaf_Nitro_Ext_Coeff * max(0., Tot_Leaf_N) / self.Min_Spec_Leaf_N) / Leaf_Nitro_Ext_Coeff
         Final_LAI = min(N_determined_LAI, self.LAI_ini)
         
         # Updating leaf area outputs
@@ -143,16 +147,16 @@ class Leaf:
             'N_determined_LAI': N_determined_LAI
         }
 
-    def Update_Specific_Leaf_N(self):
+    def Update_Specific_Leaf_N(self,Tot_Leaf_N):
         # Extracting final LAI and leaf nitrogen extinction coefficient
         Final_LAI = self.leaf_area_output['Final_LAI']
         Leaf_Nitro_Ext_Coeff = self.leaf_area_output['Leaf_Nitro_Ext_Coeff']
         
         # Calculating specific leaf nitrogen
-        Spec_Leaf_N = self.Tot_Leaf_N / Final_LAI  # Average specific leaf nitrogen
-        Spec_Leaf_N_Top = self.Tot_Leaf_N * Leaf_Nitro_Ext_Coeff / (1. - np.exp(-Leaf_Nitro_Ext_Coeff * Final_LAI))  # For top leaves
-        Spec_Leaf_N_Base_Calc = self.Tot_Leaf_N * Leaf_Nitro_Ext_Coeff * np.exp(-Leaf_Nitro_Ext_Coeff * Final_LAI) / (1. - np.exp(-Leaf_Nitro_Ext_Coeff * Final_LAI))  # Exponential nitrogen profile
-        Spec_Leaf_N_Top_Increment = (self.Tot_Leaf_N + 0.001 * self.Tot_Leaf_N) * Leaf_Nitro_Ext_Coeff / (1. - np.exp(-Leaf_Nitro_Ext_Coeff * Final_LAI))  # With small nitrogen increment
+        Spec_Leaf_N = Tot_Leaf_N / Final_LAI  # Average specific leaf nitrogen
+        Spec_Leaf_N_Top = Tot_Leaf_N * Leaf_Nitro_Ext_Coeff / (1. - np.exp(-Leaf_Nitro_Ext_Coeff * Final_LAI))  # For top leaves
+        Spec_Leaf_N_Base_Calc = Tot_Leaf_N * Leaf_Nitro_Ext_Coeff * np.exp(-Leaf_Nitro_Ext_Coeff * Final_LAI) / (1. - np.exp(-Leaf_Nitro_Ext_Coeff * Final_LAI))  # Exponential nitrogen profile
+        Spec_Leaf_N_Top_Increment = (Tot_Leaf_N + 0.001 * Tot_Leaf_N) * Leaf_Nitro_Ext_Coeff / (1. - np.exp(-Leaf_Nitro_Ext_Coeff * Final_LAI))  # With small nitrogen increment
 
         # Updating specific leaf nitrogen outputs
         self.specific_leaf_n_output = {
@@ -193,15 +197,15 @@ class Leaf:
          
          return hourly_data, w_Gauss
     
-    def INTERNAL_CO2(Leaf_Temp, VPD, VPD_Slope, Ambient_CO2, Pathway_C3C4):
+    def INTERNAL_CO2(Leaf_Temp, VPD, VPD_Slope, Ambient_CO2, C3C4_Pathway):
 
         # Air-to-leaf vapor pressure deficit
         Saturated_Vapor_Pressure_Leaf = 0.611 * np.exp(17.4 * Leaf_Temp / (Leaf_Temp + 239.))
         Vapor_Pressure_Deficit_Leaf = max(0, Saturated_Vapor_Pressure_Leaf - VPD)
         
         # Constants based on crop type
-        Michaelis_Menten_CO2_25C = 650 if Pathway_C3C4 == 1 else 404.9
-        Michaelis_Menten_O2_25C = 450 if Pathway_C3C4 == 1 else 278.4
+        Michaelis_Menten_CO2_25C = 650 if C3C4_Pathway == 1 else 404.9
+        Michaelis_Menten_O2_25C = 450 if C3C4_Pathway == 1 else 278.4
         
         # Adjustment for temperature
         KMC = Michaelis_Menten_CO2_25C * np.exp((1./298. - 1./(Leaf_Temp + 273.)) * 79430 / 8.314)
@@ -210,7 +214,7 @@ class Leaf:
         # CO2 compensation point without dark respiration
         GAMMAX = 0.5 * np.exp(-3.3801 + 5220./(Leaf_Temp + 273.) / 8.314) * 210 * KMC / KMO
         RDVCX = 0.0089 * np.exp((1/298 - 1/(Leaf_Temp + 273)) * (46390 - 65330) / 8.314)
-        GAMMA = (GAMMAX + RDVCX * KMC * (1 + 210 / KMO)) / (1 - RDVCX) / (10 if Pathway_C3C4 == 1 else 1)
+        GAMMA = (GAMMAX + RDVCX * KMC * (1 + 210 / KMO)) / (1 - RDVCX) / (10 if C3C4_Pathway == 1 else 1)
         Intercellular_CO2_Ratio = 1 - (1 - GAMMA / Ambient_CO2) * (0.14 + VPD_Slope * Vapor_Pressure_Deficit_Leaf)
         
         # Intercellular CO2 concentration
@@ -234,33 +238,85 @@ class Leaf:
         
         return Absorbed_Sunlit_Rad, Absorbed_Shaded_Rad
     
-    def PHOTOSYN(Pathway_C3C4, Absorbed_PAR, Leaf_Temp, Intercellular_CO2, Leaf_N_Content, Activation_Energy_Jmax, Vcmax_N_Slope, Jmax_N_Slope, Light_Response_Convexity):
+    def PHOTOSYN(C3C4_Pathway, Absorbed_PAR, Leaf_Temp, Intercellular_CO2, Leaf_N_Content, Activation_Energy_JMAX, VCMAX_LeafN_Slope
+                 , JMAX_LeafN_Slope,    Photosynthetic_Light_Response_Factor):
        
         # Constants and initial calculations for both C3 and C4 plants, adapted for temperature
         O2_Concentration = 210  # Oxygen concentration (mmol/mol)
-        Kmc_25C = 650 if Pathway_C3C4 < 0 else 404.9  # Michaelis-Menten constant for CO2 at 25°C, adjusted for C3/C4
-        Kmo_25C = 450 if Pathway_C3C4 < 0 else 278.4  # Michaelis-Menten constant for O2 at 25°C, adjusted for C3/C4
+        Michaelis_Menten_CO2_25C = 650 if C3C4_Pathway < 0 else 404.9  # Michaelis-Menten constant for CO2 at 25°C, adjusted for C3/C4
+        Michaelis_Menten_O2_25C = 450 if C3C4_Pathway < 0 else 278.4  # Michaelis-Menten constant for O2 at 25°C, adjusted for C3/C4
         
-        # Calculating temperature-dependent parameters
-        Kmc = Kmc_25C * np.exp((1./298. - 1./(Leaf_Temp + 273.)) * 79430 / 8.314)
-        Kmo = Kmo_25C * np.exp((1./298. - 1./(Leaf_Temp + 273.)) * 36380 / 8.314)
-        CO2_Compensation_Point = 0.5 * np.exp(-3.3801 + 5220. / (Leaf_Temp + 273.) / 8.314) * O2_Concentration * Kmc / Kmo
+        # Activation energies and other constants related to the Farquhar model
+        Activation_Energy_VCMAX = 65330  # Energy of activation for VCMAX (J/mol)
+        Activation_Energy_KMC = 79430  # Energy of activation for KMC (J/mol)
+        Activation_Energy_KMO = 36380  # Energy of activation for KMO (J/mol)
+        Activation_Energy_Dark_Respiration = 46390  # Energy of activation for dark respiration (J/mol)
+        Deactivation_Energy_JMAX = 200000  # Energy of deactivation for JMAX (J/mol)
+        Entropy_Term_JT_Equation = 650  # Entropy term in JT equation (J/mol/K)
+        Maximum_Electron_Transport_Efficiency = 0.85  # Maximum electron transport efficiency of PS II
+        Protons_For_ATP_Synthesis = 3  # Number of protons required to synthesize 1 ATP
+
         
-        Vcmax_Temperature_Adjustment = np.exp((1./298. - 1./(Leaf_Temp + 273.)) * 65330 / 8.314)
-        Electron_Transport_Temperature_Adjustment = np.exp((1./298. - 1./(Leaf_Temp + 273.)) * Activation_Energy_Jmax / 8.314)
         
-        Vcmax = Vcmax_N_Slope * Vcmax_Temperature_Adjustment * Leaf_N_Content
-        Jmax = Jmax_N_Slope * Electron_Transport_Temperature_Adjustment * Leaf_N_Content
+        # Conversion of absorbed PAR to photon flux density
+        Photon_Flux_Density = 4.56 * Absorbed_PAR  # Conversion factor to umol/m^2/s
+    
+        # Adjusting Michaelis-Menten constants for CO2 and O2 with temperature
+        CO2_Michaelis_Menten_Temp_Adjusted = Michaelis_Menten_CO2_25C * math.exp((1./298. - 1./(Leaf_Temp + 273.)) * Activation_Energy_KMC / 8.314)
+        O2_Michaelis_Menten_Temp_Adjusted = Michaelis_Menten_O2_25C * math.exp((1./298. - 1./(Leaf_Temp + 273.)) * Activation_Energy_KMO / 8.314)
+    
+        # CO2 compensation point without dark respiration
+        CO2_Compensation_No_Respiration = 0.5 * math.exp(-3.3801 + 5220. / (Leaf_Temp + 273.) / 8.314) * O2_Concentration * CO2_Michaelis_Menten_Temp_Adjusted / O2_Michaelis_Menten_Temp_Adjusted
+    
+        # Temperature effects on carboxylation and electron transport
+        Carboxylation_Temperature_Effect = math.exp((1./298. - 1./(Leaf_Temp + 273.)) * Activation_Energy_VCMAX / 8.314)
         
-        # Calculating photosynthesis rates based on available light and nitrogen content
-        PAR_Photon_Flux = 4.56 * Absorbed_PAR  # Conversion factor from J to umol for PAR
+        Electron_Transport_Temperature_Effect = math.exp((1./298. - 1./(Leaf_Temp + 273.)) * Activation_Energy_JMAX / 8.314) * \
+            (1. + math.exp(Entropy_Term_JT_Equation / 8.314 - Deactivation_Energy_JMAX / 298. / 8.314)) / \
+            (1. + math.exp(Entropy_Term_JT_Equation / 8.314 - 1. / (Leaf_Temp + 273.) * Deactivation_Energy_JMAX / 8.314))
+    
+        # Adjusted VCMAX and JMAX based on leaf nitrogen content
+        Adjusted_VCMAX = VCMAX_LeafN_Slope * Carboxylation_Temperature_Effect * Leaf_N_Content
+        Adjusted_JMAX = JMAX_LeafN_Slope * Electron_Transport_Temperature_Effect * Leaf_N_Content
+
         
-        # Further calculations for photosynthesis rates, dark respiration, and adjustments for plant type
-        # Omitted for brevity, but would include detailed biochemical model calculations as hinted above
+
+         # Assumption for electron transport
+        Pseudocyclic_Electron_Transport = 0  # Assuming no pseudocyclic electron transport
+
+        if C3C4_Pathway < 0:
+            CO2_Leakage_Factor = 0.2  # CO2 leakage from bundle-sheath to mesophyll in C4 plants
+            Concentrated_CO2 = 10 * Intercellular_CO2  # Mimicking C4 CO2 concentrating mechanism
+            Scarcity_Factor = 2 * (Concentrated_CO2 - CO2_Compensation_No_Respiration) / (1. - CO2_Leakage_Factor)
+            Quantum_Yield_Factor = 1 - Pseudocyclic_Electron_Transport - 2 * (4 * Concentrated_CO2 + 8 * CO2_Compensation_No_Respiration) / Protons_For_ATP_Synthesis / (Scarcity_Factor + 3 * Concentrated_CO2 + 7 * CO2_Compensation_No_Respiration)
+            Cyclic_Electron_Flow = Quantum_Yield_Factor
+        else:
+            Concentrated_CO2 = Intercellular_CO2  # Directly using intercellular CO2 concentration for C3 plants
+            Scarcity_Factor = 0
+            Quantum_Yield_Factor = 0
+            Cyclic_Electron_Flow = 1 - (Pseudocyclic_Electron_Transport * Protons_For_ATP_Synthesis * (Scarcity_Factor + 3 * Concentrated_CO2 + 7 * CO2_Compensation_No_Respiration) / (4 * Concentrated_CO2 + 8 * CO2_Compensation_No_Respiration) + 1) / \
+                                   (Protons_For_ATP_Synthesis * (Scarcity_Factor + 3 * Concentrated_CO2 + 7 * CO2_Compensation_No_Respiration) / (4 * Concentrated_CO2 + 8 * CO2_Compensation_No_Respiration) - 1)
+
+        # Electron transport rate in response to absorbed PAR photon flux
+        Quantum_Efficiency_Adjustment = (1 - Cyclic_Electron_Flow) / (1 + (1 - Cyclic_Electron_Flow) / Maximum_Electron_Transport_Efficiency)
+        Electron_Transport_Ratio = Quantum_Efficiency_Adjustment * Photon_Flux_Density / max(1E-10, Adjusted_JMAX)
+        Adjusted_Electron_Transport_Rate = Adjusted_JMAX * (1 + Electron_Transport_Ratio - ((1 + Electron_Transport_Ratio)**2 - 4 * Electron_Transport_Ratio * Photosynthetic_Light_Response_Factor)**0.5) / 2 / Photosynthetic_Light_Response_Factor
+    
+        # Carboxylation rates limited by Rubisco activity and electron transport
+        Carboxylation_Rate_Rubisco_Limited = Adjusted_VCMAX * Concentrated_CO2 / (Concentrated_CO2 + CO2_Michaelis_Menten_Temp_Adjusted * (O2_Concentration / O2_Michaelis_Menten_Temp_Adjusted + 1.))
+        Carboxylation_Rate_Electron_Transport_Limited = Adjusted_Electron_Transport_Rate * Concentrated_CO2 * (2 + Quantum_Yield_Factor - Cyclic_Electron_Flow) / Protons_For_ATP_Synthesis / (Scarcity_Factor + 3 * Concentrated_CO2 + 7 * CO2_Compensation_No_Respiration) / (1 - Cyclic_Electron_Flow)
+
+        # Gross rate of leaf photosynthesis
+        Photosynthesis_Efficiency = (1 - CO2_Compensation_No_Respiration / Concentrated_CO2) * min(Carboxylation_Rate_Rubisco_Limited, Carboxylation_Rate_Electron_Transport_Limited)
+        Gross_Leaf_Photosynthesis = max(1E-10, (1E-6) * 44 * Photosynthesis_Efficiency)
+    
+        # Rate of leaf dark respiration
+        Dark_Respiration_VCMAX_Ratio_25C = 0.0089  # Bas
         
-        # Placeholder return values; real implementation would include the actual calculations
-        Gross_Leaf_Photosynthesis = 0  # This would be calculated based on the model
-        Leaf_Dark_Respiration = 0  # This would be calculated based on temperature adjustments and leaf N content
+        Temporary_var = math.exp((1/298 - 1/(Leaf_Temp + 273)) * Activation_Energy_Dark_Respiration / 8.314)
+        Leaf_Dark_Respiration = (1E-6) * 44 * Dark_Respiration_VCMAX_Ratio_25C * (VCMAX_LeafN_Slope * Leaf_N_Content) * Temporary_var
+        
+        
         
         return Gross_Leaf_Photosynthesis, Leaf_Dark_Respiration
 
@@ -268,11 +324,7 @@ class Leaf:
                         Boundary_Layer_Resist_Heat, Absorbed_Global_Radiation, Atmospheric_Transmissivity, 
                         Fraction_Leaf_Classes, Leaf_Temp, Vapour_Pressure, Saturated_Vapour_Pressure_Slope, VPD):
 
-     # Constants
-     Stefan_Boltzmann_Const = 5.668E-8  # Stefan-Boltzmann constant (J/m2/s/K4)
-     Latent_Heat_Vaporization = 2.4E6  # Latent heat of water vaporization (J/kg)
-     Volumetric_Heat_Capacity_Air = 1200  # Volumetric heat capacity (J/m3/°C)
-     Psychrometric_Constant = 0.067  # Psychrometric constant (kPa/°C)
+
     
      # Net absorbed radiation calculation
      Sky_Clearness = max(0, min(1, (Atmospheric_Transmissivity - 0.25) / 0.45))  # Sky clearness
@@ -435,9 +487,6 @@ class Leaf_sunlit(Leaf):
             Transpiration_Sunlit, Net_Radiation_Absorbed_Sunlit = Leaf.Penman_Monteith(Stomatal_Resistance_Sunlit, Turbulence_Resistance, Boundary_Layer_Resistance_Water_Sunlit, Boundary_Layer_Resistance_Heat_Sunlit_Adjusted, Total_Absorbed_Radiation_Sunlit, Atmospheric_Transmissivity, Sunlit_Fraction, Hourly_Temp, Vapour_Pressure, SVP_Slope, Vapour_Pressure_Deficit)
             
             # Calculating leaf temperature difference
-            Latent_Heat_Vaporization = 2.4E6  # Latent heat of vaporization (J/kg)
-            Volumetric_Heat_Capacity_Air = 1200  # Volumetric heat capacity of air (J/m^3/°C)
-            
             Air_Leaf_Temp_Diff_Sunlit = (Net_Radiation_Absorbed_Sunlit - Latent_Heat_Vaporization * Transpiration_Sunlit) * (Boundary_Layer_Resistance_Heat_Sunlit_Adjusted + (Turbulence_Resistance * Sunlit_Fraction)) / Volumetric_Heat_Capacity_Air
             
             # Appending calculated temperature difference and adjusted leaf temperature to lists
@@ -738,16 +787,11 @@ class Leaf_sunlit(Leaf):
             Turbulence_Resistance_Canopy = 0.74 * (np.log((2 - 0.7 * Plant_Height) / (0.1 * Plant_Height))) ** 2 / (0.4 ** 2 * Wind_Speed)
             
             # Calculating leaf temperature adjustments due to water stress
-            Latent_Heat_Vaporization = 2.4E6  # Latent heat of vaporization (J/kg)
-            Volumetric_Heat_Capacity_Air = 1200  # Volumetric heat capacity of air (J/m^3/°C)
-            
             Adjusted_Turbulence_Resistance = Turbulence_Resistance_Canopy * Sunlit_Fraction
             Temperature_Difference = Leaf.Limit_Function(-25, 25, (Absorbed_Radiation_Sunlit - Latent_Heat_Vaporization * Actual_Transpiration_Sunlit) * (Boundary_Layer_Resistance_Heat_Sunlit + Adjusted_Turbulence_Resistance) / Volumetric_Heat_Capacity_Air)
             
             Adjusted_Leaf_Temperature = Hourly_Temp + Temperature_Difference
-            
-            Psychrometric_Constant = 0.067  # Psychrometric constant (kPa/°C)
-            
+                        
             # Adjusting stomatal resistance to water under water stress conditions
             Adjusted_Stomatal_Resistance_Water = (Transpiration_Sunlit - Actual_Transpiration_Sunlit) * (Slope_VPD * (Boundary_Layer_Resistance_Heat_Sunlit + Adjusted_Turbulence_Resistance) + Psychrometric_Constant * (Boundary_Layer_Resistance_Water_Sunlit + Adjusted_Turbulence_Resistance)) / Actual_Transpiration_Sunlit / Psychrometric_Constant + Transpiration_Sunlit / Actual_Transpiration_Sunlit * Stomatal_Resistance_Water_Sunlit
             
@@ -881,9 +925,6 @@ class Leaf_Shaded(Leaf):
             
             Potential_Transpiration_Shaded, Net_Radiation_Absorbed_Shaded = Leaf.Penman_Monteith(Stomatal_Resist_Water_Shaded, Turbulence_Resist_Canopy, Boundary_Layer_Water_Resist_Shaded, Boundary_Layer_Heat_Resist_Shaded, Absorbed_Total_Radiation_Shaded, Atmospheric_Transmissivity, Fraction_Shaded, Hourly_Temp, Vapour_Pressure, Slope_SVP, Vapour_Pressure_Deficit)
             # Calculate leaf temperature for shaded leaves
-            Latent_Heat_Vaporization = 2.4E6  # Latent heat of water vaporization (J/kg)
-            Volumetric_Heat_Capacity_Air = 1200  # Volumetric heat capacity (J/m^3/°C)
-            
             Temperature_Difference_Shaded = (Net_Radiation_Absorbed_Shaded - Latent_Heat_Vaporization * Potential_Transpiration_Shaded) * (Boundary_Layer_Heat_Resist_Shaded + (Turbulence_Resist_Canopy * Fraction_Shaded)) / Volumetric_Heat_Capacity_Air
             hourly_Air_Temperature_Difference_Shaded.append(Temperature_Difference_Shaded)
             
@@ -1190,15 +1231,11 @@ class Leaf_Shaded(Leaf):
             Turbulence_Resistance_Canopy = 0.74 * (np.log((2. - 0.7 * Plant_Height) / (0.1 * Plant_Height))) ** 2 / (0.4 ** 2 * Wind_Speed)
             
             # Leaf temperature if water stress occurs
-            Latent_Heat_of_Vaporization = 2.4E6  # Latent heat of water vaporization (J/kg)
-            Volumetric_Heat_Capacity = 1200  # Volumetric heat capacity (J/m^3/°C)
-            
             RT_Canopy = Turbulence_Resistance_Canopy * Fraction_Shaded
-            Temperature_Difference = Leaf.Limit_Function(-25., 25., (Radiation_Shaded - Latent_Heat_of_Vaporization * Actual_Transpiration_Shaded) * (Shaded_Leaf_Boundary_Layer_Resistance_Heat + RT_Canopy) / Volumetric_Heat_Capacity)
+            Temperature_Difference = Leaf.Limit_Function(-25., 25., (Radiation_Shaded - Latent_Heat_Vaporization * Actual_Transpiration_Shaded) * (Shaded_Leaf_Boundary_Layer_Resistance_Heat + RT_Canopy) / Volumetric_Heat_Capacity_Air)
             
             Leaf_Temperature = Hourly_Temp + Temperature_Difference
             
-            Psychrometric_Constant = 0.067  # psychrometric constant (kPa/oC)
 
 
             # Stomatal resistance to water if water stress occurs

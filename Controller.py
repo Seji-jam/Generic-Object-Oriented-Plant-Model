@@ -27,7 +27,8 @@ Soil_object=Soil.Soil(Residual_Water_Content, Saturated_Water_Content, temperatu
              nitrogen_stress_water_index, water_supply_switch, daily_water_input, ammonium_nitrogen_input_rate,
              nitrate_nitrogen_input_rate, plant_material_dpm_rpm_ratio, soil_resistance_to_evaporation,
              sand_percentage)
-Leaf_object=Leaf.Leaf(Veg_C_Fraction, Spec_Leaf_Area, LAI_ini, Leaf_Blade_Angle, Leaf_Width, Tot_Leaf_N, Min_Spec_Leaf_N, Pathway_C3C4, Ambient_CO2, Activation_Energy_JMAX, VCMAX_LeafN_Slope, JMAX_LeafN_Slope, Photosynthetic_Light_Response_Factor)
+Leaf_object=Leaf.Leaf( Spec_Leaf_Area, LAI_ini, Leaf_Blade_Angle, Leaf_Width,  Min_Spec_Leaf_N, Pathway_C3C4, Ambient_CO2,
+                      Activation_Energy_JMAX, VCMAX_LeafN_Slope, JMAX_LeafN_Slope, Photosynthetic_Light_Response_Factor )
 # Iterate over each timestep's weather data
 for day_data in weather_data:
     # Extract the necessary weather data for the current timestep
