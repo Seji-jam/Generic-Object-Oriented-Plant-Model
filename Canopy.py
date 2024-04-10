@@ -3,7 +3,8 @@ import Leaf
 import numpy as np
 
 class Canopy:
-    def __init__(self, BTemp_Phen, OTemp_Phen, CTemp_Phen, TempCurve_Res, CropType_Photoperiod, StartPhotoperiod_Phase, EndPhotoperiod_Phase, Photoperiod_Sensitivity, MinThermal_Day_Veg, MinThermal_Day_Rep,
+    def __init__(self, BTemp_Phen, OTemp_Phen, CTemp_Phen, TempCurve_Res, CropType_Photoperiod, StartPhotoperiod_Phase, EndPhotoperiod_Phase, Photoperiod_Sensitivity,
+                 MinThermal_Day_Veg, MinThermal_Day_Rep,
                  CarbonAlloc_Shoot, NitrogenAlloc_Shoot, Plant_Density, Seed_Weight, 
                  Crop_TypeDet, EndSeedNum_DetPeriod, SeedN_RemobFract, SLA_Const, MinSLN_Photosyn, MinRootN_Conc,
                  CarbonCost_NFix, MaxN_Uptake, MinStemN_Conc,
@@ -25,8 +26,8 @@ class Canopy:
         self.MinThermal_Day_Rep = MinThermal_Day_Rep
 
         # Calculate biomass
-        self.CarbonAlloc_Shoot = CarbonAlloc_Shoot  # Fraction of carbon allocated to shoot at emergence
-        self.NitrogenAlloc_Shoot = NitrogenAlloc_Shoot  # Fraction of nitrogen allocated to shoot at emergence (assuming)
+        self.CarbonAlloc_Shoot = CarbonAlloc_Shoot 
+        self.NitrogenAlloc_Shoot = NitrogenAlloc_Shoot  
         self.Plant_Density = Plant_Density
         self.Seed_Weight = Seed_Weight
         self.MaxPlant_Height = MaxPlant_Height
@@ -43,9 +44,6 @@ class Canopy:
         self.StemDW_Height = StemDW_Height
         self.CarbonCost_NFix = CarbonCost_NFix
         self.MaxN_Uptake = MaxN_Uptake
-        self.IniNConc_SeedFill = IniNConc_SeedFill
-        self.FinalNConc_SeedFill = FinalNConc_SeedFill
-        self.tm = tm
         self.legume = legume
         self.MinStemN_Conc = MinStemN_Conc
         self.IniLeafN_Conc = IniLeafN_Conc
@@ -673,17 +671,6 @@ class Canopy:
         self.Nitrogen_Seed_Rate = Nitrogen_Seed_Rate
 
     def Calculate_Leaf_Area_ChangeRate(self, LAI_Current, SpecificLeafNitrogen_BottomCurrent, LeafNitrogen_ExtinctionCoefficient):
-        """
-        Calculates the daily increase of leaf area index (LAI) (m2 leaf/m2 ground/day).
-    
-        Parameters:
-        - LAI_Current: Current Leaf Area Index (m2 m-2)
-        - SpecificLeafNitrogen_BottomCurrent: Current specific nitrogen content of bottom leaves (g m-2)
-        - LeafNitrogen_ExtinctionCoefficient: Leaf nitrogen extinction coefficient (m2 m-2)
-        
-        Returns:
-        - Rate_LeafAreaIndex: Rate of increment in leaf area index (m2 m-2 day-1)
-        """
         Rate_SpecificLeafNitrogen_Bottom = (SpecificLeafNitrogen_BottomCurrent - self.SpecificLeafNitrogen_Bottom) / self.Model_TimeStep
     
         # Rate of LAI driven by carbon supply
@@ -793,7 +780,6 @@ class Canopy:
         self.Carbon_Stem += self.CarbonSupply_StemTotal
         self.Carbon_Seed += self.CarbonSupply_Seed
         
-        # It seems there might be a conceptual or typographical error here; double-check what this should update
         self.Carbon_Root += self.Carbon_InitialRoot
         
         self.Carbon_DeadLeafShed += self.LeafDetritus_Carbon
