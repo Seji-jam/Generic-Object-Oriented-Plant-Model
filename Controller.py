@@ -16,8 +16,7 @@ Canopy_object=Canopy.Canopy(BTemp_Phen, OTemp_Phen, CTemp_Phen, TempCurve_Res, C
              CarbonCost_NFix, MaxN_Uptake, MinStemN_Conc,
              IniLeafN_Conc, MaxPlant_Height,
              legume,
-             MaxStemGrowth_DS, MaxSeedGrowth_DS, StemDW_Height, Model_TimeStep,
-             IniNConc_SeedFill, FinalNConc_SeedFill, tm)
+             MaxStemGrowth_DS, MaxSeedGrowth_DS, StemDW_Height, Model_TimeStep)
 
 Root_object=Root.Root(Canopy_object.cfv, root_to_shoot_ratio, max_root_depth, Canopy_object.Nitrogen_Root, Canopy_object.CarbonReserve_Root, Canopy_object.min_N_concentration_root, Canopy_object.Model_TimeStep, Soil_Depth_1)
 Soil_object=Soil.Soil(Residual_Water_Content, Saturated_Water_Content, temperature_change_constant, lodging_condition,

@@ -9,8 +9,7 @@ class Canopy:
                  CarbonCost_NFix, MaxN_Uptake, MinStemN_Conc,
                  IniLeafN_Conc, MaxPlant_Height,
                  legume,
-                 MaxStemGrowth_DS, MaxSeedGrowth_DS, StemDW_Height, Model_TimeStep,
-                 IniNConc_SeedFill, FinalNConc_SeedFill, tm):
+                 MaxStemGrowth_DS, MaxSeedGrowth_DS, StemDW_Height, Model_TimeStep):
         # Thermal Units
         self.BTemp_Phen = BTemp_Phen
         self.OTemp_Phen = OTemp_Phen
@@ -649,8 +648,7 @@ class Canopy:
         Nitrogen_Stem_Rate = self.StemWeight_Rate * self.Switch_Function(-Nitrogen_Total_Available, self.StemN_Conc, 0.)
     
         # Expected N dynamics during seed filling
-        SeedFill_Dynamics = self.Carbon_Begin + (self.Carbon_End - self.Carbon_Begin) * (4 - self.Transition_Fastest - self.DevelopmentStage) / (2 - self.Transition_Fastest) * (self.DevelopmentStage - 1) ** (1 / (2 - self.Transition_Fastest))
-        Expected_SeedNitrogen_Conc = self.Limit_Function(self.Carbon_Begin, self.Carbon_End, SeedFill_Dynamics) * self.Standard_SeedNitrogen_Conc
+        Expected_SeedNitrogen_Conc =  self.Standard_SeedNitrogen_Conc
     
         # Rate of N accumulation in seed
         Nitrogen_Seed_Growth = Nitrogen_Shoot_New - Nitrogen_Stem_Rate - Expected_SeedNitrogen_Conc * self.SeedWeight_Rate
