@@ -3,13 +3,9 @@ import numpy as np
 
 
 class Root:
-    def __init__(self, carbon_fraction_veg, root_to_shoot_ratio, max_root_depth, root_nitrogen_content, carbon_reserves_roots, min_N_concentration_root, Model_TimeStep, Soil_Depth_1):
-        self.carbon_fraction_veg = carbon_fraction_veg
+    def __init__(self,  root_to_shoot_ratio, max_root_depth, Nitrogen_Root, Model_TimeStep, Soil_Depth_1):
         self.root_to_shoot_ratio = root_to_shoot_ratio
         self.max_root_depth = max_root_depth
-        self.root_nitrogen_content = root_nitrogen_content
-        self.carbon_reserves_roots = carbon_reserves_roots
-        self.min_N_concentration_root = min_N_concentration_root
         self.Model_TimeStep = Model_TimeStep
         self.root_depth_initial = max(2.0, Soil_Depth_1)
         self.root_depth_current = self.root_depth_initial
@@ -31,12 +27,12 @@ class Root:
         return out
 
 
-    def calculate_root_senescence(self, carbon_structural_roots):
-        kcrn = -np.log(0.05) / 6.3424 / self.carbon_fraction_veg / self.root_to_shoot_ratio / self.max_root_depth
-        nitrogen_determined_csrt = 1 / kcrn * math.log(1.0 + kcrn * max(0.0, (self.root_nitrogen_content * self.carbon_fraction_veg - self.carbon_reserves_roots * self.min_N_concentration_root)) / self.min_N_concentration_root)
+    def calculate_root_senescence(self, carbon_structural_roots,CarbonFrac_Veg,MinRootN_Conc,ReserveRoot_Carbon,Nitrogen_Root):
+        kcrn = -np.log(0.05) / 6.3424 / CarbonFrac_Veg / self.root_to_shoot_ratio / self.max_root_depth
+        nitrogen_determined_csrt = 1 / kcrn * math.log(1.0 + kcrn * max(0.0, (Nitrogen_Root * CarbonFrac_Veg - ReserveRoot_Carbon * MinRootN_Conc)) / MinRootN_Conc)
         carbon_loss_rate_senescence = max(min(carbon_structural_roots - 1.0e-4, carbon_structural_roots - min(nitrogen_determined_csrt, carbon_structural_roots)), 0.0) / self.delt
-        weight_roots_living = carbon_loss_rate_senescence / self.carbon_fraction_veg
-        nitrogen_loss_rate_senescence = weight_roots_living * self.min_N_concentration_root
+        weight_roots_living = carbon_loss_rate_senescence / CarbonFrac_Veg
+        nitrogen_loss_rate_senescence = weight_roots_living * MinRootN_Conc
         self.weight_roots_living = weight_roots_living
         self.nitrogen_loss_rate_senescence = nitrogen_loss_rate_senescence
         self.carbon_structural_roots = carbon_structural_roots
