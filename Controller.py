@@ -18,7 +18,7 @@ Canopy_object=Canopy.Canopy(BTemp_Phen, OTemp_Phen, CTemp_Phen, TempCurve_Res, C
              legume,
              MaxStemGrowth_DS, MaxSeedGrowth_DS, StemDW_Height, Model_TimeStep)
 
-Root_object=Root.Root(Canopy_object.cfv, root_to_shoot_ratio, max_root_depth, Canopy_object.Nitrogen_Root, Canopy_object.CarbonReserve_Root, Canopy_object.min_N_concentration_root, Canopy_object.Model_TimeStep, Soil_Depth_1)
+Root_object=Root.Root(root_to_shoot_ratio, max_root_depth,  Model_TimeStep, Soil_Depth_1)
 Soil_object=Soil.Soil(Residual_Water_Content, Saturated_Water_Content, temperature_change_constant, lodging_condition,
              Soil_Depth_1, initial_soil_temp, initial_decomposable_plant_material, field_capacity_water_content, clay_percentage, residual_ammonium,
              residual_nitrate, dpm_decomposition_rate, rpm_decomposition_rate,
@@ -171,7 +171,8 @@ for day_data in weather_data:
 
     Canopy_object.Calculate_Carbon_Flow_Stem_Growth()
 
-    Root_object.Calculate_Root_Senescence()
+    Root_object.Calculate_Root_Senescence(Canopy_object.carbon_structural_roots,Canopy_object.CarbonFrac_Veg, Canopy_object.MinRootN_Conc, Canopy_object.ReserveRoot_Carbon, Canopy_object.Nitrogen_Root)
+
 
     Canopy_object.Calculate_Carbon_Partitioning(Leaf_object.leaf_area_output['N_determined_LAI'],Leaf_object.laic, Root_object.csrtn)
     
