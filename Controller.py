@@ -19,14 +19,13 @@ Canopy_object=Canopy.Canopy(BTemp_Phen, OTemp_Phen, CTemp_Phen, TempCurve_Res, C
              MaxStemGrowth_DS, MaxSeedGrowth_DS, StemDW_Height, Model_TimeStep)
 
 Root_object=Root.Root(root_to_shoot_ratio, max_root_depth,  Model_TimeStep, Soil_Depth_1)
-Soil_object=Soil.Soil(Residual_Water_Content, Saturated_Water_Content, temperature_change_constant, lodging_condition,
-             Soil_Depth_1, initial_soil_temp, initial_decomposable_plant_material, field_capacity_water_content, clay_percentage, residual_ammonium,
-             residual_nitrate, dpm_decomposition_rate, rpm_decomposition_rate,
-             biomass_incorporation_rate, humification_rate, total_organic_carbon, biochar_carbon_content,
-             biochar_conversion_fraction, parameter_adjustment_multiplier, initial_ammonium_content, initial_nitrate_content,
-             nitrogen_stress_water_index, water_supply_switch, daily_water_input, ammonium_nitrogen_input_rate,
-             nitrate_nitrogen_input_rate, plant_material_dpm_rpm_ratio, soil_resistance_to_evaporation,
-             sand_percentage)
+Soil_object=Soil.Soil( Residual_Water_Content, Saturated_Water_Content, temperature_change_constant,  field_capacity_water_content, 
+             Soil_Depth_1,clay_percentage,sand_percentage,
+              initial_soil_temp,  daily_water_input, soil_resistance_to_evaporation,
+             fraction_soil_greater_than_2mm,soil_bulk_density,organic_N_percentage,fraction_N_for_mineralization,
+             nitrate_concentration_ppm,ammonium_concentration_ppm,water,
+             Fertilizer_applications_count,Fertilizer_applications_amount,Fertilizer_applications_DAP,Fraction_volatilization,
+             Days_after_planting)
 Leaf_object=Leaf.Leaf( Spec_Leaf_Area, LAI_ini, Leaf_Blade_Angle, Leaf_Width,  Min_Spec_Leaf_N, Pathway_C3C4, Ambient_CO2,
                       Activation_Energy_JMAX, VCMAX_LeafN_Slope, JMAX_LeafN_Slope, Photosynthetic_Light_Response_Factor )
 # Iterate over each timestep's weather data
@@ -44,7 +43,7 @@ for day_data in weather_data:
     Wind_Speed = day_data['Wind_Speed']
     rain = day_data['Rain']
     doy=day_data['Doy']
-    dap=doy-planting_doy+1
+    Days_after_planting=doy-planting_doy+1
     
 
 
