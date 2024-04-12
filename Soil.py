@@ -6,7 +6,7 @@ def SWITCH_FUN(x, y1, y2):
     return y1 if x < 0 else y2
 wgauss = np.array([0.1184635, 0.2393144, 0.2844444, 0.2393144, 0.1184635])
 class Soil:
-    def __init__(self, Residual_Water_Content, Saturated_Water_Content, temperature_change_constant,  field_capacity_water_content, 
+    def __init__(self, Residual_Water_Content, Saturated_Water_Content, temperature_change_constant,  field_capacity_water_content, water_content_initial,
                  Soil_Depth_1,clay_percentage,sand_percentage,
                   initial_soil_temp,  daily_water_input, soil_resistance_to_evaporation,
                  fraction_soil_greater_than_2mm,soil_bulk_density,organic_N_percentage,fraction_N_for_mineralization,
@@ -22,6 +22,7 @@ class Soil:
         self.initial_soil_temp = initial_soil_temp  # Initial soil temperature
         # self.initial_decomposable_plant_material = initial_decomposable_plant_material  # Initial decomposable plant material in soil
         self.field_capacity_water_content = field_capacity_water_content  # Water content at field capacity
+        self.water_content_initial=water_content_initial
         self.clay_percentage = clay_percentage  # Clay content in soil
         # self.residual_ammonium = residual_ammonium  # Residual ammonium-N in the soil
         # self.residual_nitrate = residual_nitrate  # Residual nitrate-N in the soil
@@ -87,14 +88,14 @@ class Soil:
         self.nitrification_lower_layer = 0  # Nitrification rate in the lower soil layer
         self.mineralized_ammonium_upper_layer = 0  # Mineralized ammonium in the upper soil layer
         self.mineralized_ammonium_lower_layer = 0  # Mineralized ammonium in the lower soil layer
-        # Note: Duplicate self.minaul removed
+
         self.water_stress_factor = 0  # Factor indicating water stress
         self.nitrogen_uptake = 0  # Nitrogen uptake rate
 
 
         self.hourly_Soil_Evap=[]
         self.hourly_Soil_Rad=[]
-        
+
 
         # Irrigation and fertilization can be input in the weather file as well! 
         # Irrigation schedule: Days and corresponding irrigation amount (currently set to 0)
@@ -118,9 +119,9 @@ class Soil:
         # Initial conditions and parameter calculations
         root_depth_ini = max(2.0, Soil_Depth_1)
         # biochar_initial_content = biochar_conversion_fraction * total_organic_carbon
-        water_content_initial = field_capacity_water_content * parameter_adjustment_multiplier
-        water_upper_soil_initial = 10.0 * (water_content_initial - Residual_Water_Content) * root_depth_ini
-        water_lower_soil_initial = 10.0 * (water_content_initial - Residual_Water_Content) * (150.0 - root_depth_ini)
+        # water_content_initial = field_capacity_water_content * parameter_adjustment_multiplier
+        Root_zone_soil_moisture_initial = 10.0 * (self.water_content_initial - Residual_Water_Content) * root_depth_ini
+        Below_Root_zone_soil_moisture_initial = 10.0 * (self.water_content_initial - Residual_Water_Content) * (150.0 - root_depth_ini)
         # resistant_plant_material_initial = total_organic_carbon - biochar_initial_content - initial_decomposable_plant_material
         # humus_initial_content = biochar_initial_content - biochar_initial_content
         # decomposable_plant_nitrogen_initial = 1.0 / 40.0 * initial_decomposable_plant_material
@@ -149,8 +150,8 @@ class Soil:
         # self.humus_content = humus_initial_content  
         # self.decomposable_plant_nitrogen = decomposable_plant_nitrogen_initial  
         # self.resistant_plant_nitrogen = resistant_plant_nitrogen_initial   
-        self.water_upper_soil = water_upper_soil_initial 
-        self.water_lower_soil = water_lower_soil_initial 
+        self.Root_zone_soil_moisture = Root_zone_soil_moisture_initial 
+        self.Below_Root_zone_soil_moisture = Below_Root_zone_soil_moisture_initial 
         self.Root_Depth = root_depth_ini  
         self.initial_soil_temperature = initial_soil_temp 
         # self.ammonium_upper_layer = ammonium_upper_layer_initial
@@ -166,7 +167,7 @@ class Soil:
         self.Actual_evap_daily =0
         self.hourly_rbhs=[]
         self.hourly_rts=[]
-
+        self.available_soluble_N=0
 
      
 
@@ -175,10 +176,10 @@ class Soil:
     
         def Calculate_Soil_Water_Content(self):
             # Calculate the water content in the upper soil layer, adjusting for root depth
-            water_content_upper_layer = (self.water_content_upper_soil_layer + self.Residual_Water_Content * 10.0 * self.Root_Depth) / 10.0 / self.Root_Depth
+            water_content_upper_layer = (self.Root_zone_soil_moisture + self.Residual_Water_Content * 10.0 * self.Root_Depth) / 10.0 / self.Root_Depth
             
             # Calculate the water content of the lower soil layer, considering the soil's root depth and making sure it doesn't exceed the saturated water content
-            water_content_lower_layer = min(self.Saturated_Water_Content, (self.water_content_lower_soil_layer + self.Residual_Water_Content * 10.0 * (150.0 - self.Root_Depth)) / 10.0 / (150.0 - self.Root_Depth))
+            water_content_lower_layer = min(self.Saturated_Water_Content, (self.Below_Root_zone_soil_moisture + self.Residual_Water_Content * 10.0 * (150.0 - self.Root_Depth)) / 10.0 / (150.0 - self.Root_Depth))
             
             # Determine the daily water supply available for evapotranspiration, with a safeguard for a minimum value
             daily_water_supply_for_et = self.switch_fun(-1, self.daily_water_input, max(0.1, self.water_content_upper_soil_layer / self.temperature_change_constant + 0.1))
@@ -427,22 +428,21 @@ class Soil:
             N_mineralization_rate_constant = 24 * (math.exp(17.753 - 6350.5 / (self.soil_temperature + 273))) / 168
             N_mineralization_factor = 1 - math.exp(-N_mineralization_rate_constant)
             
-            # Adjust for soil water content
-            if fraction_transpirable_soil_water < 0.9:
-                relative_N = 1.111 * fraction_transpirable_soil_water
-            else:
-                relative_N = 10 - 10 * fraction_transpirable_soil_water
-            if relative_N < 0:
-                relative_N = 0
+            # # Adjust for soil water content
+            # if fraction_transpirable_soil_water < 0.9:
+            #     mineralization_sensitivity = 1.111 * fraction_transpirable_soil_water
+            # else:
+            #     mineralization_sensitivity = 10 - 10 * fraction_transpirable_soil_water
+            # if mineralization_sensitivity < 0:
+            #     mineralization_sensitivity = 0
+            mineralization_sensitivity=1
             
             # Calculate net N mineralization
-            net_N_mineralization = mineralizable_organic_N * relative_N * N_mineralization_factor
+            net_N_mineralization = mineralizable_organic_N * mineralization_sensitivity * N_mineralization_factor
             # Apply threshold of 200 mgN.L-1
             net_N_mineralization = net_N_mineralization * (0.0002 - self.N_concentration) / 0.0002
             if net_N_mineralization < 0:
                 net_N_mineralization = 0
-            
-           
             
            
             
@@ -462,7 +462,7 @@ class Soil:
                
                N_fertilization = N_volatilization = 0
                  
-             
+            
              
          
             # Calculate N leaching based on soluble N, water, and drainage
@@ -476,27 +476,24 @@ class Soil:
         
          
                  
-        
-            if fraction_transpirable_soil_water > 1:  # Condition for water saturation
+            N_denitrification=0
+            if self.current_soil_mositure >=  self.Saturated_Water_Content:  # Condition for water saturation
                 adjusted_N_concentration = self.N_concentration
                 
-            # Apply threshold of 400 mgN.L-1 to the N concentration
-            if adjusted_N_concentration > 0.0004:
-                adjusted_N_concentration = 0.0004
+                # Apply threshold of 400 mgN.L-1 to the N concentration
+                if adjusted_N_concentration > 0.0004:
+                    adjusted_N_concentration = 0.0004
             
-            # Calculate denitrification rate constant based on temperature
-            denitrification_rate_constant = 6 * math.exp(0.07735 * self.soil_temperature - 6.593)
-            
-            # Calculate N denitrification per g of water
-            N_denitrification = adjusted_N_concentration * (1 - math.exp(-denitrification_rate_constant))
-            
-            # Convert N denitrification to gN.m-2 based on water volume
-            N_denitrification = N_denitrification * water * 1000
-            
-            
-                    
-            
-            
+                # Calculate denitrification rate constant based on temperature
+                denitrification_rate_constant = 6 * math.exp(0.07735 * self.soil_temperature - 6.593)
+                
+                # Calculate N denitrification per g of water
+                N_denitrification = adjusted_N_concentration * (1 - math.exp(-denitrification_rate_constant))
+                
+                # Convert N denitrification to gN.m-2 based on water volume
+                N_denitrification = N_denitrification * water * 1000
+                            
+                
             # Calculate the fraction of the top layer with roots
             fraction_top_layer_with_roots = self.Root_Depth / self.Soil_Depth_1
             if fraction_top_layer_with_roots > 1:
@@ -511,9 +508,11 @@ class Soil:
             self.N_concentration = self.soluble_N / (water * 1000)
             
             # Calculate available soluble N in the root zone based on a threshold of 1 mgN.L-1
-            available_soluble_N = (self.N_concentration - 0.000001) * ATSW1 * 1000 * fraction_top_layer_with_roots
+            available_soluble_N = (self.N_concentration - 0.000001) * self.soil_water_content_upper_layer * 1000 * fraction_top_layer_with_roots
             if available_soluble_N < 0:
                 available_soluble_N = 0
+            
+            self.available_soluble_N=available_soluble_N
             
     
     
