@@ -4,11 +4,11 @@ import pandas as pd
 
 
 class WeatherMeteo:
-    def __init__(self, filename, lat, Sun_Angle_Inclination, Start_Time):
+    def __init__(self, filename, lat, Simulation_Start_DOY):
         self.filename = filename
         self.lat = lat
-        self.Sun_Angle_Inclination = Sun_Angle_Inclination
-        self.Start_Time = Start_Time
+        self.Sun_Angle_Inclination = -2
+        self.Start_Time = Simulation_Start_DOY
         self.rad = np.pi / 180
 
     def meteo_calculations(self, doy):
