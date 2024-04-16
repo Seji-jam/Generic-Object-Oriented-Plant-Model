@@ -33,13 +33,13 @@ Canopy_Diffuse_Reflection_Coefficient_NIR = 0.389  # Canopy diffuse NIR reflecti
 
 ##self.Plant_Height ... take care of Plant_Height because it's should be comming from canopy
 class Leaf: 
-    def __init__(self,  Spec_Leaf_Area, LAI_ini, Leaf_Blade_Angle, Leaf_Width, Min_Spec_Leaf_N, C3C4_Pathway, Ambient_CO2, Activation_Energy_JMAX,
+    def __init__(self,  SLA_Const, Leaf_Blade_Angle, Leaf_Width, C3C4_Pathway, Ambient_CO2, Activation_Energy_JMAX,
                  VCMAX_LeafN_Slope, JMAX_LeafN_Slope, Photosynthetic_Light_Response_Factor ):
-        self.Spec_Leaf_Area = Spec_Leaf_Area
-        self.LAI_ini = LAI_ini
+        self.Spec_Leaf_Area = SLA_Const
+        # self.LAI_ini = LAI_ini
         self.Leaf_Blade_Angle = Leaf_Blade_Angle
         self.Leaf_Width = Leaf_Width
-        self.Min_Spec_Leaf_N = Min_Spec_Leaf_N
+        # self.Min_Spec_Leaf_N = Min_Spec_Leaf_N
         self.C3C4_Pathway = C3C4_Pathway
         self.Ambient_CO2 = Ambient_CO2
         self.Activation_Energy_JMAX = Activation_Energy_JMAX
@@ -48,7 +48,7 @@ class Leaf:
         self.Photosynthetic_Light_Response_Factor = Photosynthetic_Light_Response_Factor
 
         # Initial conditions
-        self.Carbon_Dead_Leaves=self.Carbon_Litters_Soil = self.Dif_Ait_leaf_T=0         
+        self.Carbon_Dead_Leaves=self.Carbon_Dead_Leaves_Litters_Soil = self.Dif_Ait_leaf_T=0         
 
         # Initialize attributes to store outputs
         self.leaf_area_output = {}
@@ -135,28 +135,28 @@ class Leaf:
         return Diffuse_Ext_Coeff
 
 
-    def Update_Leaf_Area(self,Tot_Leaf_N,CarbonFrac_Veg):
+    def Update_Leaf_Area(self,Tot_Leaf_N,CarbonFrac_Veg,Carbon_determined_LAI,Min_Specific_Leaf_N):
 
         # Calculating delta and total leaf area index (LAI)
-        Delta_LAI = (self.Carb_Dead_Leaves - self.Carb_Leaves_to_Litters) / CarbonFrac_Veg * self.Spec_Leaf_Area
-        Total_LAI = self.LAI_ini + self.Carb_Dead_Leaves / CarbonFrac_Veg * self.Spec_Leaf_Area
+        Dead_LAI = (self.Carbon_Dead_Leaves - self.Carbon_Dead_Leaves_Litters_Soil) / CarbonFrac_Veg * self.Spec_Leaf_Area
+        Total_LAI = Carbon_determined_LAI + self.Carbon_Dead_Leaves / CarbonFrac_Veg * self.Spec_Leaf_Area
 
         # Nitrogen and light extinction coefficients
         Light_Ext_Coeff = Leaf.KDF_Coeff(Total_LAI, self.Leaf_Blade_Angle * np.pi / 180., 0.2)
-        Nitro_Ext_Coeff = Light_Ext_Coeff * (Tot_Leaf_N - self.Min_Spec_Leaf_N * Total_LAI)
-        Nitro_Base_K = self.Min_Spec_Leaf_N * (1.0 - np.exp(-Light_Ext_Coeff * Total_LAI))
+        Nitro_Ext_Coeff = Light_Ext_Coeff * (Tot_Leaf_N - Min_Specific_Leaf_N * Total_LAI)
+        Nitro_Base_K = Min_Specific_Leaf_N * (1.0 - np.exp(-Light_Ext_Coeff * Total_LAI))
         
         # Assuming wind extinction coefficient is similar to light for simplicity
         Wind_Ext_Coeff = Light_Ext_Coeff  
         Leaf_Nitro_Ext_Coeff = 1.0 / Total_LAI * math.log((Nitro_Ext_Coeff + Nitro_Base_K) / (Nitro_Ext_Coeff * math.exp(-Light_Ext_Coeff * Total_LAI) + Nitro_Base_K))
 
         # Integrating LAI considering nitrogen effect
-        N_determined_LAI = math.log(1. + Leaf_Nitro_Ext_Coeff * max(0., Tot_Leaf_N) / self.Min_Spec_Leaf_N) / Leaf_Nitro_Ext_Coeff
-        Final_LAI = min(N_determined_LAI, self.LAI_ini)
+        N_determined_LAI = math.log(1. + Leaf_Nitro_Ext_Coeff * max(0., Tot_Leaf_N) / Min_Specific_Leaf_N) / Leaf_Nitro_Ext_Coeff
+        Final_LAI = min(N_determined_LAI, Carbon_determined_LAI)
         
         # Updating leaf area outputs
         self.leaf_area_output = {
-            'Delta_LAI': Delta_LAI,
+            'Dead_LAI': Dead_LAI,
             'Total_LAI': Total_LAI,
             'Light_Ext_Coeff': Light_Ext_Coeff,
             'Nitro_Ext_Coeff': Nitro_Ext_Coeff,

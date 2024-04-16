@@ -6,39 +6,39 @@ import Soil
 import Leaf
 import Canopy
 import AtmoWeather
-from Input_Setup import ImportData
+from Input_Setup import Import_Data
 
 
-User_Inputs = r'User_Inputs.xlsx'
-Default_Inputs = r'Default_Inputs.xlsx'
-weatherfilename='weatherfile.xlsx'
+User_Inputs_file = r'User_Inputs.xlsx'
+Default_Inputs_file = r'Default_Inputs.xlsx'
+Weather_File='weatherfile.xlsx'
 
 # Load crop data from both files
-User_Inputs = ImportData(User_Inputs)
-Default_Inputs = ImportData(Default_Inputs)
-Inputs=User_Inputs.append(Default_Inputs)
+Inputs = Import_Data(User_Inputs_file)
+Default_Inputs = Import_Data(Default_Inputs_file)
+Inputs.append_data(Default_Inputs)
 
-weather_meteo = AtmoWeather.WeatherMeteo(weatherfilename, Inputs.latitude, Inputs.Simulation_Start_DOY)
+weather_meteo = AtmoWeather.WeatherMeteo(Weather_File, Inputs.Latitude, Inputs.Simulation_Start_DOY)
 weather_data = weather_meteo.process_data()  # This contains weather data for all timesteps
 Canopy_object=Canopy.Canopy(Inputs.BTemp_Phen, Inputs.OTemp_Phen, Inputs.CTemp_Phen, Inputs.TempCurve_Res, 
                             Inputs.CropType_Photoperiod, Inputs.StartPhotoperiod_Phase, Inputs.EndPhotoperiod_Phase, 
                             Inputs.Photoperiod_Sensitivity, Inputs.MinThermal_Day_Veg, Inputs.MinThermal_Day_Rep,
              Inputs.CarbonAlloc_Shoot, Inputs.NitrogenAlloc_Shoot, Inputs.Plant_Density, Inputs.Seed_Weight, 
-             Inputs.Crop_TypeDet, Inputs.EndSeedNum_DetPeriod, Inputs.SeedN_RemobFract, Inputs.SLA_Const, Inputs.MinSLN_Photosyn, Inputs.MinRootN_Conc,
+             Inputs.Crop_TypeDet, Inputs.EndSeedNum_DetPeriod, Inputs.SeedN_RemobFract, Inputs.SLA_Const, Inputs.Min_Specific_Leaf_N, Inputs.MinRootN_Conc,
              Inputs.CarbonCost_NFix, Inputs.MaxN_Uptake, Inputs.MinStemN_Conc,
              Inputs.IniLeafN_Conc, Inputs.MaxPlant_Height,
-             Inputs.legume,
+             Inputs.Legume,
              Inputs.MaxStemGrowth_DS, Inputs.MaxSeedGrowth_DS, Inputs.StemDW_Height, Inputs.Model_TimeStep)
 
-Root_object=Root.Root(Inputs.root_to_shoot_ratio, Inputs.max_root_depth,  Inputs.Model_TimeStep, Inputs.Soil_Depth_1)
-Soil_object=Soil.Soil( Inputs.Residual_Water_Content, Inputs.Saturated_Water_Content, Inputs.temperature_change_constant,  Inputs.field_capacity_water_content, 
+Root_object=Root.Root(Inputs.Critical_root_weight_density, Inputs.max_root_depth,  Inputs.Model_TimeStep, Inputs.Soil_Depth_1)
+Soil_object=Soil.Soil( Inputs.Residual_Water_Content, Inputs.Saturated_Water_Content, Inputs.field_capacity_water_content, Inputs.water_content_initial,
              Inputs.Soil_Depth_1,Inputs.clay_percentage,Inputs.sand_percentage,
-              Inputs.initial_soil_temp,  Inputs.daily_water_input, Inputs.soil_resistance_to_evaporation,
+              Inputs.initial_soil_temp,  Inputs.soil_resistance_to_evaporation,
              Inputs.fraction_soil_greater_than_2mm,Inputs.soil_bulk_density,Inputs.organic_N_percentage,Inputs.fraction_N_for_mineralization,
-             Inputs.nitrate_concentration_ppm,Inputs.ammonium_concentration_ppm,Inputs.water,
+             Inputs.nitrate_concentration_ppm,Inputs.ammonium_concentration_ppm,
              Inputs.Fertilizer_applications_count,Inputs.Fertilizer_applications_amount,Inputs.Fertilizer_applications_DAP,Inputs.Fraction_volatilization,
-             Inputs.Days_after_planting)
-Leaf_object=Leaf.Leaf( Inputs.Spec_Leaf_Area, Inputs.LAI_ini, Inputs.Leaf_Blade_Angle, Inputs.Leaf_Width,  Inputs.Min_Spec_Leaf_N, Inputs.Pathway_C3C4, Inputs.Ambient_CO2,
+             )
+Leaf_object=Leaf.Leaf( Inputs.SLA_Const, Inputs.Leaf_Blade_Angle, Inputs.Leaf_Width,  Inputs.C3C4_Pathway, Inputs.Ambient_CO2,
                       Inputs.Activation_Energy_JMAX, Inputs.VCMAX_LeafN_Slope, Inputs.JMAX_LeafN_Slope, Inputs.Photosynthetic_Light_Response_Factor )
 # Iterate over each timestep's weather data
 for day_data in weather_data:
@@ -49,8 +49,8 @@ for day_data in weather_data:
     Day_Length = day_data['Day_Length']
     Daily_Sin_Beam_Exposure = day_data['Daily_Sin_Beam_Exposure']
     Solar_Radiation = day_data['Solar_Radiation']
-    tmax = day_data['tmax']
-    tmin = day_data['tmin']
+    tmax = day_data['Max_Temp']
+    tmin = day_data['Min_Temp']
     Vapour_Pressure = day_data['Vapour_Pressure']
     Wind_Speed = day_data['Wind_Speed']
     rain = day_data['Rain']
@@ -60,8 +60,9 @@ for day_data in weather_data:
 
 
     # The Leaf Area Update could be part of canopy as well
-    Leaf_object.Update_Leaf_Area()
-    Leaf_object.Update_Specific_Leaf_N()
+    Leaf_object.Update_Leaf_Area(Canopy_object.Tot_Leaf_N,Canopy_object.CarbonFrac_Veg,
+                                 Canopy_object.Carbon_determined_LAI,Canopy_object.Min_Specific_Leaf_N)
+    Leaf_object.Update_Specific_Leaf_N(Canopy_object.Tot_Leaf_N)
 
     # =============================================================================
     # Instantiating Sunlit and shaded leaves for calculating Potential PHOTOSYNTHESIS AND TRANSPIRATION

@@ -2,11 +2,22 @@ import math
 import Leaf
 import numpy as np
 
+#initializing intermediate variables
+GrowthEfficiency = 0.25  # Growth efficiency
+CarbonFrac_Veg = 0.48  # Carbon fraction in vegetative biomass
+FractionProtein_StorageOrgans = 0.13  # Fraction of protein in storage organs
+FractionCarbs_StorageOrgans = 0.71  # Fraction of carbohydrates in storage organs
+CarbonFraction_Organs = 0.47  # Carbon fraction in the storage organs
+YieldGrowthOutput = 0.8  # Growth efficiency for storage organs
+
+
+
+
 class Canopy:
     def __init__(self, BTemp_Phen, OTemp_Phen, CTemp_Phen, TempCurve_Res, CropType_Photoperiod, StartPhotoperiod_Phase, EndPhotoperiod_Phase, Photoperiod_Sensitivity,
                  MinThermal_Day_Veg, MinThermal_Day_Rep,
                  CarbonAlloc_Shoot, NitrogenAlloc_Shoot, Plant_Density, Seed_Weight, 
-                 Crop_TypeDet, EndSeedNum_DetPeriod, SeedN_RemobFract, SLA_Const, MinSLN_Photosyn, MinRootN_Conc,
+                 Crop_TypeDet, EndSeedNum_DetPeriod, SeedN_RemobFract, SLA_Const, Min_Specific_Leaf_N, MinRootN_Conc,
                  CarbonCost_NFix, MaxN_Uptake, MinStemN_Conc,
                  IniLeafN_Conc, MaxPlant_Height,
                  legume,
@@ -37,7 +48,7 @@ class Canopy:
         self.EndSeedNum_DetPeriod = EndSeedNum_DetPeriod
         self.SeedN_RemobFract = SeedN_RemobFract
         self.SLA_Const = SLA_Const
-        self.MinSLN_Photosyn = MinSLN_Photosyn
+        self.Min_Specific_Leaf_N = Min_Specific_Leaf_N
         self.MinRootN_Conc = MinRootN_Conc
         self.MaxSeedGrowth_DS = MaxSeedGrowth_DS
         self.MaxStemGrowth_DS = MaxStemGrowth_DS
@@ -49,21 +60,21 @@ class Canopy:
         self.IniLeafN_Conc = IniLeafN_Conc
         
         #initializing intermediate variables
-        self.GrowthEfficiency = 0.25  # Growth efficiency
-        self.CarbonFrac_Veg = 0.48  # Carbon fraction in vegetative biomass
-        self.FractionProtein_StorageOrgans = 0.13  # Fraction of protein in storage organs
-        self.FractionCarbs_StorageOrgans = 0.71  # Fraction of carbohydrates in storage organs
-        self.CarbonFraction_Organs = 0.47  # Carbon fraction in the storage organs
-        self.YieldGrowthOutput = 0.8  # Growth efficiency for storage organs
+        self.GrowthEfficiency = GrowthEfficiency  # Growth efficiency
+        self.CarbonFrac_Veg = CarbonFrac_Veg  # Carbon fraction in vegetative biomass
+        self.FractionProtein_StorageOrgans = FractionProtein_StorageOrgans  # Fraction of protein in storage organs
+        self.FractionCarbs_StorageOrgans = FractionCarbs_StorageOrgans  # Fraction of carbohydrates in storage organs
+        self.CarbonFraction_Organs = CarbonFraction_Organs  # Carbon fraction in the storage organs
+        self.YieldGrowthOutput = YieldGrowthOutput  # Growth efficiency for storage organs
         
-        self.InitCarbon_LivingVegBiomass = self.Plant_Density * self.Seed_Weight * self.CarbonFraction_Organs * self.GrowthEfficiency * self.CarbonAlloc_Shoot
-        self.InitCarbon_ReproductiveTissues = self.Plant_Density * self.Seed_Weight * self.CarbonFraction_Organs * self.GrowthEfficiency * (1.0 - self.CarbonAlloc_Shoot)
-        self.InitLeafAreaIndex = self.InitCarbon_LivingVegBiomass / self.CarbonFrac_Veg * self.SLA_Const
-        self.Nitrogen_InitialLeaf = self.IniLeafN_Conc * self.InitCarbon_LivingVegBiomass / self.CarbonFrac_Veg
-        self.InitPlant_Height = self.MaxPlant_Height / 1000.0  # Converting to a different unit if necessary
-        self.MinLeafN_Conc = self.SLA_Const * self.MinSLN_Photosyn
-        self.InitNitrogen_ReproductiveTissues = (self.Plant_Density * self.Seed_Weight * self.GrowthEfficiency * self.IniLeafN_Conc * self.CarbonAlloc_Shoot / self.NitrogenAlloc_Shoot) - self.Nitrogen_InitialLeaf
-        self.InitSpecificLeafN_Biomass = self.Nitrogen_InitialLeaf / self.InitLeafAreaIndex
+        self.Initial_Leaf_Carbon = self.Plant_Density * self.Seed_Weight * self.CarbonFraction_Organs * self.GrowthEfficiency * self.CarbonAlloc_Shoot
+        self.Initial_Root_Carbon = self.Plant_Density * self.Seed_Weight * self.CarbonFraction_Organs * self.GrowthEfficiency * (1.0 - self.CarbonAlloc_Shoot)
+        self.Initial_Leaf_N = self.IniLeafN_Conc * self.Initial_Leaf_Carbon / self.CarbonFrac_Veg
+        self.Initial_Root_N = (self.Plant_Density * self.Seed_Weight * self.GrowthEfficiency * self.IniLeafN_Conc * self.CarbonAlloc_Shoot / self.NitrogenAlloc_Shoot) - self.Initial_Leaf_N
+        self.Initial_Plant_Height = self.MaxPlant_Height / 1000.0  # Converting to a different unit if necessary
+        self.MinLeafN_Conc = self.SLA_Const * self.Min_Specific_Leaf_N
+        self.Initial_LAI = self.Initial_Leaf_Carbon / self.CarbonFrac_Veg * self.SLA_Const
+        self.Initial_SLN_Bottom = self.Initial_Leaf_N / self.Initial_LAI
 
 
         # Actual canopy conditions
@@ -101,8 +112,8 @@ class Canopy:
         self.Carbon_Supply_StemTotal = 0
         self.Carbon_Supply_Seed = 0
         self.Carbon_Supply_Leaf = 0
-        self.LAI_Current = self.Initial_LAI
-        self.LAI_Next = self.Initial_LAI
+        self.Carbon_determined_LAI = self.Initial_LAI
+
     
         self.NitrogenFixation_Rate = 0
         self.Rate_SpecificLeafNitrogen_Bottom = 0
@@ -166,18 +177,18 @@ class Canopy:
         self.CumulativeThermalUnits = 0
     
         # Carbon in various plant components
-        self.Carbon_Leaf = self.Carbon_InitialLeaf
+        self.Carbon_Leaf = self.Initial_Leaf_Carbon
         self.Carbon_DeadLeaf = 0
         self.Carbon_Stem = 0
         self.Carbon_Seed = 0
-        self.Carbon_Root = self.Carbon_InitialRoot
+        self.Carbon_Root = self.Initial_Root_Carbon
         self.Carbon_DeadLeafShed = 0
     
         # Nitrogen in various plant components
-        self.Nitrogen_Root = self.Nitrogen_InitialRoot
+        self.Nitrogen_Root = self.Initial_Root_N
         self.Nitrogen_Stem = 0
-        self.Nitrogen_Leaf = self.Nitrogen_InitialLeaf
-        self.Tot_Leaf_N = self.Nitrogen_InitialLeaf
+        self.Nitrogen_Leaf = self.Initial_Leaf_N
+        self.Tot_Leaf_N = self.Initial_Leaf_N
         self.Nitrogen_Seed = 0
         self.Nitrogen_DeadLeaf = 0
     
@@ -209,8 +220,8 @@ class Canopy:
         self.FlowLimit_Carbon_Seed = 0
         self.FlowLimit_Carbon_Stem = 0
 
-            # Specific Leaf Nitrogen content and Leaf Area Index
-        self.SpecificLeafNitrogen_Bottom = self.SpecificLeafNitrogen_BottomInitial
+        # Specific Leaf Nitrogen content and Leaf Area Index
+        self.SpecificLeafNitrogen_Bottom = self.Initial_SLN_Bottom
         self.LAI_Current = self.Initial_LAI  # Initial Leaf Area Index
     
         # Respiration Multiplier and Nitrogen dynamics
@@ -444,7 +455,7 @@ class Canopy:
         High_Nitrogen_Conc_Crit = self.IniLeafN_Conc * np.exp(-0.4 * self.DevelopmentStage)
         Nitrogen_Demand_Dynamic = self.Switch_Function(self.DevelopmentStage - 1.0, self.Shoot_Dry_Weight * (High_Nitrogen_Conc_Crit - self.Shoot_Nitrogen_Conc) * (1.0 + self.Nitrogen_Root / self.Nitrogen_Shoot) / self.Model_TimeStep, 0.0)
         Nitrogen_Demand_Adjusted = self.Switch_Function(self.Leaf_Nitrogen_Conc - 1.5 * self.IniLeafN_Conc, max(Nitrogen_Demand_Allocation, Nitrogen_Demand_Dynamic), 0)
-        Nitrogen_Demand = self.Switch_Function(self.MinSLN_Photosyn - Specific_Leaf_Nitrogen + 1.0e-5, min(self.MaxN_Uptake, Nitrogen_Demand_Adjusted), 0)  # Crop nitrogen demand
+        Nitrogen_Demand = self.Switch_Function(self.Min_Specific_Leaf_N - Specific_Leaf_Nitrogen + 1.0e-5, min(self.MaxN_Uptake, Nitrogen_Demand_Adjusted), 0)  # Crop nitrogen demand
     
         print(self.Carbon_Root, Shoot_Harvestable_Sugar_Allocation)
         self.Nitrogen_Demand_Allocation = Nitrogen_Demand_Allocation
@@ -454,7 +465,7 @@ class Canopy:
 
 
     def Calculate_Nitrogen_Partitioning(self, Specific_Leaf_Nitrogen_Target):
-        Nitrogen_Carbon_Ratio = self.Switch_Function(Specific_Leaf_Nitrogen_Target - self.MinSLN_Photosyn, 0, min(self.MaxN_Uptake, self.Nitrogen_Demand_Allocation)) / (self.YieldGrowth_Veg * (self.Actual_Canopy_Photosynthesis - self.Respiration_Main - self.Respired_Carbon) * 12 / 44)
+        Nitrogen_Carbon_Ratio = self.Switch_Function(Specific_Leaf_Nitrogen_Target - self.Min_Specific_Leaf_N, 0, min(self.MaxN_Uptake, self.Nitrogen_Demand_Allocation)) / (self.YieldGrowth_Veg * (self.Actual_Canopy_Photosynthesis - self.Respiration_Main - self.Respired_Carbon) * 12 / 44)
         Shoot_Harvestable_Sugar_Allocation = 12.0 / 44.0 * self.YieldGrowth_Veg * (self.Actual_Canopy_Photosynthesis - self.Respiration_Main - self.Respired_Carbon) / self.Carbon_Shoot
         Fraction_Shoot_Nitrogen = 1 / (1 + Nitrogen_Carbon_Ratio * 1 / Shoot_Harvestable_Sugar_Allocation * self.Carbon_Shoot / self.Carbon_Root * self.Nitrogen_Root / self.Nitrogen_Shoot)
         

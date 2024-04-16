@@ -6,17 +6,16 @@ def SWITCH_FUN(x, y1, y2):
     return y1 if x < 0 else y2
 wgauss = np.array([0.1184635, 0.2393144, 0.2844444, 0.2393144, 0.1184635])
 class Soil:
-    def __init__(self, Residual_Water_Content, Saturated_Water_Content, temperature_change_constant,  field_capacity_water_content, water_content_initial,
+    def __init__(self, Residual_Water_Content, Saturated_Water_Content, field_capacity_water_content, water_content_initial,
                  Soil_Depth_1,clay_percentage,sand_percentage,
-                  initial_soil_temp,  daily_water_input, soil_resistance_to_evaporation,
+                  initial_soil_temp,  soil_resistance_to_evaporation,
                  fraction_soil_greater_than_2mm,soil_bulk_density,organic_N_percentage,fraction_N_for_mineralization,
-                 nitrate_concentration_ppm,ammonium_concentration_ppm,water,
+                 nitrate_concentration_ppm,ammonium_concentration_ppm,
                  Fertilizer_applications_count,Fertilizer_applications_amount,Fertilizer_applications_DAP,Fraction_volatilization,
-                 Days_after_planting,):
+                 ):
         
         self.Residual_Water_Content = Residual_Water_Content  # Residual water content
         self.Saturated_Water_Content = Saturated_Water_Content  # Saturated water content
-        self.temperature_change_constant = temperature_change_constant
         # self.lodging_condition = lodging_condition  # Lodging condition
         self.Soil_Depth_1 = Soil_Depth_1  # Soil bulk density
         self.initial_soil_temp = initial_soil_temp  # Initial soil temperature
@@ -38,7 +37,7 @@ class Soil:
         # self.initial_nitrate_content = initial_nitrate_content  # Initial Nitrate nitrogen content in soil
         # self.nitrogen_stress_water_index = nitrogen_stress_water_index  # Nitrogen stress water index
         # self.water_supply_switch = water_supply_switch  # Switch variable for water supply to crop
-        self.daily_water_input = daily_water_input  # Daily water input (precipitation + irrigation)
+        # self.daily_water_input = daily_water_input  # Daily water input (precipitation + irrigation)
         # self.ammonium_nitrogen_input_rate = ammonium_nitrogen_input_rate  # Ammonium nitrogen input rate
         # self.nitrate_nitrogen_input_rate = nitrate_nitrogen_input_rate  # Nitrate nitrogen input rate
         # self.plant_material_dpm_rpm_ratio = plant_material_dpm_rpm_ratio  # Ratio dpm/rpm of added plant material
@@ -51,23 +50,25 @@ class Soil:
         self.nitrate_concentration_ppm = nitrate_concentration_ppm  # Nitrate concentration (ppm = mg.kg−1)
         self.ammonium_concentration_ppm = ammonium_concentration_ppm  # Ammonium concentration (ppm = mg.kg−1)
         self.Soil_Depth_1 = Soil_Depth_1  # Depth, assuming necessary for calculation
-        self.water = water  # Water, assuming necessary for calculation
+        # self.water = water  # Water, assuming necessary for calculation
         self.Fertilizer_applications_count = Fertilizer_applications_count  
         self.Fertilizer_applications_amount = Fertilizer_applications_amount  
         self.Fraction_volatilization = Fraction_volatilization  
+        Fertilizer_applications_DAP=0
+        self.Fertilizer_applications_DAP=[Fertilizer_applications_DAP]
+        self.Fertilizer_applications_amount=[Fertilizer_applications_amount]
+        self.Fraction_volatilization=[Fraction_volatilization]
        
-        self.Fertilizer_applications_DAP=list(Fertilizer_applications_DAP)
-        self.Fertilizer_applications_amount=list(Fertilizer_applications_amount)
-        self.Fraction_volatilization=list(Fraction_volatilization)
        
-       
+        self.time_change_constant = 1 ########################## this is set as 1 day ... if the model changes to hourly this constant needs to be changed to 1/24
+
         soil_mass = self.Soil_Depth_1 * soil_bulk_density * (1 - fraction_soil_greater_than_2mm) * 1000  # g.m-2
         organic_N_mass = organic_N_percentage * 0.01 * soil_mass  # g.m-2
         mineralizable_organic_N = organic_N_mass * fraction_N_for_mineralization  # gN.m-2 org. N avail. for miner.
         nitrate_mass = nitrate_concentration_ppm * (14 / 62) * 0.000001 * soil_mass  # from ppm to gN.m-2
         ammonium_mass = ammonium_concentration_ppm * (14 / 18) * 0.000001 * soil_mass  # from ppm to gN.m-2
         self.soluble_N = nitrate_mass + ammonium_mass  # gN.m-2
-        self.N_concentration = self.soluble_N / (water * 1000)  # gN.g-1 H2O
+        # self.N_concentration = self.soluble_N / (water * 1000)  # gN.g-1 H2O
         
 
 
@@ -182,7 +183,7 @@ class Soil:
             water_content_lower_layer = min(self.Saturated_Water_Content, (self.Below_Root_zone_soil_moisture + self.Residual_Water_Content * 10.0 * (150.0 - self.Root_Depth)) / 10.0 / (150.0 - self.Root_Depth))
             
             # Determine the daily water supply available for evapotranspiration, with a safeguard for a minimum value
-            daily_water_supply_for_et = self.switch_fun(-1, self.daily_water_input, max(0.1, self.water_content_upper_soil_layer / self.temperature_change_constant + 0.1))
+            daily_water_supply_for_et =  max(0.1, self.water_content_upper_soil_layer / self.time_change_constant + 0.1)
             
             # Update the class attributes with the calculated values
             self.soil_water_content_upper_layer = water_content_upper_layer
@@ -386,7 +387,7 @@ class Soil:
             soil_steady_state_avg_temp = (daily_avg_temperature + self.Day_Air_Soil_temp_dif + nightly_avg_temperature) / 2.
             
             # Calculate the rate of change in soil temperature
-            rate_of_change_soil_temp = (soil_steady_state_avg_temp - self.initial_soil_temp) / self.temperature_change_constant
+            rate_of_change_soil_temp = (soil_steady_state_avg_temp - self.initial_soil_temp) / self.time_change_constant
             
             # Print the rate of change in soil temperature for debugging or information purposes
             print(rate_of_change_soil_temp)
@@ -406,8 +407,8 @@ class Soil:
                 rain_and_irrigation = rainfall + irrigation
                 
                 # Recharges to upper and lower soil layers
-                recharge_to_upper_layer = min(10.0 * (self.Saturated_Water_Content - self.soil_water_content_upper_layer) * self.Root_Depth / self.temperature_change_constant, rain_and_irrigation)
-                recharge_to_lower_layer = min(10.0 * (self.Saturated_Water_Content - self.soil_water_content_lower_layer) * (150.0 - self.Root_Depth) / self.temperature_change_constant, rain_and_irrigation - recharge_to_upper_layer)
+                recharge_to_upper_layer = min(10.0 * (self.Saturated_Water_Content - self.soil_water_content_upper_layer) * self.Root_Depth / self.time_change_constant, rain_and_irrigation)
+                recharge_to_lower_layer = min(10.0 * (self.Saturated_Water_Content - self.soil_water_content_lower_layer) * (150.0 - self.Root_Depth) / self.time_change_constant, rain_and_irrigation - recharge_to_upper_layer)
                 
                 # Groundwater recharge and water loss
                 groundwater_recharge = max(0., rain_and_irrigation - recharge_to_upper_layer - recharge_to_lower_layer)
@@ -545,16 +546,16 @@ class Soil:
     #     clay_bonus = 1.67 * (1.85 + 1.60 * np.exp(-0.0786 * self.clay_percentage))
 
     #     carbon_nitrogen_dpm_ratio = (self.initial_decomposable_plant_material + self.resistant_plant_material_initial) / self.Avoid_Zero_Division(self.decomposable_plant_nitrogen_initial + self.resistant_plant_nitrogen_initial)
-    #     decomposed_biomass = self.biomass_incorporation_rate * (1 - math.exp(-temperature_factor * moisture_factor * self.biomass_incorporation_rate / 365)) / self.temperature_change_constant
-    #     decomposed_humus = self.humus_initial_content * (1 - math.exp(-temperature_factor * moisture_factor * self.humification_rate / 365)) / self.temperature_change_constant
+    #     decomposed_biomass = self.biomass_incorporation_rate * (1 - math.exp(-temperature_factor * moisture_factor * self.biomass_incorporation_rate / 365)) / self.time_change_constant
+    #     decomposed_humus = self.humus_initial_content * (1 - math.exp(-temperature_factor * moisture_factor * self.humification_rate / 365)) / self.time_change_constant
 
     #     dpm_rate_adjusted = self.switch_function(1.0 / self.Avoid_Zero_Division(carbon_nitrogen_dpm_ratio) - 1.0 / (8.5 * (1.0 + clay_bonus)), decomposable_pm_rate_change, self.dpm_decomposition_rate)
     #     rpm_rate_adjusted = self.switch_function(1.0 / self.Avoid_Zero_Division(carbon_nitrogen_dpm_ratio) - 1.0 / (8.5 * (1.0 + clay_bonus)), resistant_pm_rate_change, self.rpm_decomposition_rate)
         
-    #     decomposed_dpm = self.initial_decomposable_plant_material * (1.0 - math.exp(-temperature_factor * moisture_factor * dpm_rate_adjusted / 365)) / self.temperature_change_constant
-    #     decomposed_rpm = self.resistant_plant_material_initial * (1.0 - math.exp(-temperature_factor * moisture_factor * rpm_rate_adjusted / 365)) / self.temperature_change_constant
-    #     decomposed_dpn = self.decomposable_plant_nitrogen_initial * (1.0 - math.exp(-temperature_factor * moisture_factor * dpm_rate_adjusted / 365)) / self.temperature_change_constant
-    #     decomposed_rpn = self.resistant_plant_nitrogen_initial * (1.0 - math.exp(-temperature_factor * moisture_factor * rpm_rate_adjusted / 365)) / self.temperature_change_constant
+    #     decomposed_dpm = self.initial_decomposable_plant_material * (1.0 - math.exp(-temperature_factor * moisture_factor * dpm_rate_adjusted / 365)) / self.time_change_constant
+    #     decomposed_rpm = self.resistant_plant_material_initial * (1.0 - math.exp(-temperature_factor * moisture_factor * rpm_rate_adjusted / 365)) / self.time_change_constant
+    #     decomposed_dpn = self.decomposable_plant_nitrogen_initial * (1.0 - math.exp(-temperature_factor * moisture_factor * dpm_rate_adjusted / 365)) / self.time_change_constant
+    #     decomposed_rpn = self.resistant_plant_nitrogen_initial * (1.0 - math.exp(-temperature_factor * moisture_factor * rpm_rate_adjusted / 365)) / self.time_change_constant
 
     #     mineralized_nitrogen = 1.0 / 8.5 * (decomposed_biomass + decomposed_humus) + decomposed_dpn + decomposed_rpn - 1.0 / 8.5 / (1.0 + clay_bonus) * \
     #                           (decomposed_dpm + decomposed_rpm + decomposed_biomass + decomposed_humus)
@@ -579,27 +580,27 @@ class Soil:
 
     def Calculate_Nitrogen_Uptake(self, nitrogen_demand, nitrogen_fixation_rate):
         # Calculate supply of ammonium nitrogen from the soil
-        ammonium_nitrogen_supply_as = max(0., self.ammonium_upper_layer + (self.mineralized_ammonium_upper_layer - self.nitrate_upper_layer) * self.temperature_change_constant - self.Root_Depth / 150. * self.residual_ammonium) / self.temperature_change_constant
+        ammonium_nitrogen_supply = max(0., self.ammonium_upper_layer + (self.mineralized_ammonium_upper_layer - self.nitrate_upper_layer) * self.time_change_constant - self.Root_Depth / 150. * self.residual_ammonium) / self.time_change_constant
         
         # Calculate supply of nitrate nitrogen from the soil, factoring in water stress
-        nitrate_nitrogen_supply_ns = max(0., self.nitrate_upper_layer + (self.mineralized_nitrate_upper_layer - self.denitrification_upper_layer) * self.temperature_change_constant - self.Root_Depth / 150. * self.residual_nitrate) / self.temperature_change_constant * self.nitrogen_stress_water_index
+        nitrate_nitrogen_supply = max(0., self.nitrate_upper_layer + (self.mineralized_nitrate_upper_layer - self.denitrification_upper_layer) * self.time_change_constant - self.Root_Depth / 150. * self.residual_nitrate) / self.time_change_constant * self.nitrogen_stress_water_index
         
         # Determine actual nitrogen supply based on soil water index
-        ammonium_nitrogen_supply = self.switch_function(self.water_supply_switch, self.ammonium_nitrogen_input_rate, ammonium_nitrogen_supply_as)
-        nitrate_nitrogen_supply = self.switch_function(self.water_supply_switch, self.nitrate_nitrogen_input_rate, nitrate_nitrogen_supply_ns)
+        ammonium_nitrogen_supply = self.switch_function(self.water_supply_switch, self.ammonium_nitrogen_input_rate, ammonium_nitrogen_supply)
+        nitrate_nitrogen_supply = self.switch_function(self.water_supply_switch, self.nitrate_nitrogen_input_rate, nitrate_nitrogen_supply)
         
         # Total nitrogen supply
         total_nitrogen_supply = ammonium_nitrogen_supply + nitrate_nitrogen_supply
         
         # Calculate nitrogen uptake, respecting the demand and fixation rate
-        ammonium_nitrogen_uptake = min(ammonium_nitrogen_supply, ammonium_nitrogen_supply / max(1e-10, total_nitrogen_supply) * max(0, nitrogen_demand - nitrogen_fixation_rate / self.temperature_change_constant))
-        nitrate_nitrogen_uptake = min(nitrate_nitrogen_supply, nitrate_nitrogen_supply / max(1e-10, total_nitrogen_supply) * max(0, nitrogen_demand - nitrogen_fixation_rate / self.temperature_change_constant))
+        ammonium_nitrogen_uptake = min(ammonium_nitrogen_supply, ammonium_nitrogen_supply / max(1e-10, total_nitrogen_supply) * max(0, nitrogen_demand - nitrogen_fixation_rate / self.time_change_constant))
+        nitrate_nitrogen_uptake = min(nitrate_nitrogen_supply, nitrate_nitrogen_supply / max(1e-10, total_nitrogen_supply) * max(0, nitrogen_demand - nitrogen_fixation_rate / self.time_change_constant))
         
         # Total nitrogen uptake, ensuring it does not exceed demand
-        total_nitrogen_uptake = max(0, ammonium_nitrogen_uptake + nitrate_nitrogen_uptake + min(nitrogen_demand, nitrogen_fixation_rate / self.temperature_change_constant))
+        total_nitrogen_uptake = max(0, ammonium_nitrogen_uptake + nitrate_nitrogen_uptake + min(nitrogen_demand, nitrogen_fixation_rate / self.time_change_constant))
         
         # Debugging print statements can be commented out or removed in production
-        print(ammonium_nitrogen_uptake, nitrate_nitrogen_uptake, nitrogen_demand, nitrogen_fixation_rate, self.temperature_change_constant)
+        print(ammonium_nitrogen_uptake, nitrate_nitrogen_uptake, nitrogen_demand, nitrogen_fixation_rate, self.time_change_constant)
         
         # Update class attributes with the calculated values
         self.total_nitrogen_uptake = total_nitrogen_uptake
@@ -615,27 +616,27 @@ class Soil:
     # def Organic_Nitrogen_Composition(self, rainfall):
 
     #     # Calculate mineralized ammonium in upper and lower layers
-    #     mineralized_ammonium_upper_layer = self.switch_function(self.mineralized_nitrogen, -min((self.ammonium_lower_layer - self.Root_Depth / 150. * self.residual_ammonium) / self.temperature_change_constant, -self.mineralized_nitrogen_upper_layer), self.mineralized_nitrogen_upper_layer)
-    #     mineralized_ammonium_lower_layer = self.switch_function(self.mineralized_nitrogen, -min((self.ammonium_lower_layer - (150. - self.Root_Depth) / 150. * self.residual_ammonium) / self.temperature_change_constant, -self.mineralized_nitrogen_lower_layer), self.mineralized_nitrogen_lower_layer)
+    #     mineralized_ammonium_upper_layer = self.switch_function(self.mineralized_nitrogen, -min((self.ammonium_lower_layer - self.Root_Depth / 150. * self.residual_ammonium) / self.time_change_constant, -self.mineralized_nitrogen_upper_layer), self.mineralized_nitrogen_upper_layer)
+    #     mineralized_ammonium_lower_layer = self.switch_function(self.mineralized_nitrogen, -min((self.ammonium_lower_layer - (150. - self.Root_Depth) / 150. * self.residual_ammonium) / self.time_change_constant, -self.mineralized_nitrogen_lower_layer), self.mineralized_nitrogen_lower_layer)
 
     #     # Calculate mineralized nitrate in upper and lower layers
-    #     mineralized_nitrate_upper_layer = self.switch_function(self.mineralized_nitrogen, -min(self.nitrate_upper_layer/self.temperature_change_constant, -self.mineralized_nitrogen_upper_layer + mineralized_ammonium_upper_layer), 0.)
-    #     mineralized_nitrate_lower_layer = self.switch_function(self.mineralized_nitrogen, -min(self.nitrate_lower_layer/self.temperature_change_constant, -self.mineralized_nitrogen_lower_layer + mineralized_ammonium_lower_layer), 0.)
+    #     mineralized_nitrate_upper_layer = self.switch_function(self.mineralized_nitrogen, -min(self.nitrate_upper_layer/self.time_change_constant, -self.mineralized_nitrogen_upper_layer + mineralized_ammonium_upper_layer), 0.)
+    #     mineralized_nitrate_lower_layer = self.switch_function(self.mineralized_nitrogen, -min(self.nitrate_lower_layer/self.time_change_constant, -self.mineralized_nitrogen_lower_layer + mineralized_ammonium_lower_layer), 0.)
 
     #     # Calculate moisture factors for upper and lower layers
     #     moisture_factor_upper_layer = self.Limit_Function(0.2, 1.0, 0.2 + 0.8 * self.soil_water_content_upper_layer / 10. / self.Root_Depth / (self.field_capacity_water_content - self.Residual_Water_Content))
     #     moisture_factor_lower_layer = self.Limit_Function(0.2, 1.0, 0.2 + 0.8 * self.soil_water_content_lower_layer / 10. / (150. - self.Root_Depth) / (self.field_capacity_water_content - self.Residual_Water_Content))
 
     #     # Calculate nitrification in upper and lower layers
-    #     nitrification_upper_layer = max(0., (self.ammonium_upper_layer + mineralized_ammonium_upper_layer * self.temperature_change_constant - self.Root_Depth / 150 * self.residual_ammonium)) * (1 - np.exp(-self.temperature_factor * moisture_factor_upper_layer * 0.6 / 7)) / self.temperature_change_constant
-    #     nitrification_lower_layer = max(0., (self.ammonium_lower_layer + mineralized_ammonium_lower_layer * self.temperature_change_constant - (150 - self.Root_Depth) / 150 * self.residual_ammonium)) * (1 - np.exp(-self.temperature_factor * moisture_factor_lower_layer * 0.6 / 7)) / self.temperature_change_constant
+    #     nitrification_upper_layer = max(0., (self.ammonium_upper_layer + mineralized_ammonium_upper_layer * self.time_change_constant - self.Root_Depth / 150 * self.residual_ammonium)) * (1 - np.exp(-self.temperature_factor * moisture_factor_upper_layer * 0.6 / 7)) / self.time_change_constant
+    #     nitrification_lower_layer = max(0., (self.ammonium_lower_layer + mineralized_ammonium_lower_layer * self.time_change_constant - (150 - self.Root_Depth) / 150 * self.residual_ammonium)) * (1 - np.exp(-self.temperature_factor * moisture_factor_lower_layer * 0.6 / 7)) / self.time_change_constant
 
     #     # Calculate CO2 respiration
     #     respiration_co2 = self.clay_bonus / (1.0 + self.clay_bonus) * (self.decomposed_dpm + self.decomposed_rpm + self.decomposed_biomass + self.decomposed_humus)
 
     #     # Calculate denitrification in upper and lower layers
-    #     denitrification_upper_layer = .0005 * max(0., self.nitrate_upper_layer + mineralized_nitrate_upper_layer * self.temperature_change_constant - self.Root_Depth / 150. * self.residual_nitrate) * respiration_co2 * (1. - np.exp(-0.065 * self.Root_Depth))
-    #     denitrification_lower_layer = .0005 * max(0., self.nitrate_lower_layer + mineralized_nitrate_lower_layer * self.temperature_change_constant - (150. - self.Root_Depth) / 150. * self.residual_nitrate) * respiration_co2 * np.exp(-0.065 * self.Root_Depth)
+    #     denitrification_upper_layer = .0005 * max(0., self.nitrate_upper_layer + mineralized_nitrate_upper_layer * self.time_change_constant - self.Root_Depth / 150. * self.residual_nitrate) * respiration_co2 * (1. - np.exp(-0.065 * self.Root_Depth))
+    #     denitrification_lower_layer = .0005 * max(0., self.nitrate_lower_layer + mineralized_nitrate_lower_layer * self.time_change_constant - (150. - self.Root_Depth) / 150. * self.residual_nitrate) * respiration_co2 * np.exp(-0.065 * self.Root_Depth)
 
     #     # Calculate water stress factor
     #     water_stress_factor = min(1, self.soil_water_content_upper_layer / (self.Root_Depth * 10 * (self.field_capacity_water_content - self.Residual_Water_Content)))
@@ -673,8 +674,8 @@ class Soil:
     #     residual_soil_ammonium = ammonium_fertilizer_application - self.soil_ammonium_volatilization_rate / 3
         
     #     # Leaching losses for ammonium and nitrate in lower soil layer
-    #     leaching_ammonium_lower_layer = max(0, self.nitrate_lower_layer + (self.mineralized_nitrate_lower_layer - self.denitrification_upper_layer) * self.temperature_change_constant - (150 - self.Root_Depth) / 150 * self.groundwater_recharge) * min(self.groundwater_recharge / self.Saturated_Water_Content / (150 - self.Root_Depth) / 10, 1)
-    #     leaching_nitrate_upper_layer = max(0, (self.total_nitrate_nitrogen_supply - self.nitrate_nitrogen_uptake) * self.temperature_change_constant - self.Root_Depth / 150 * self.groundwater_recharge) * min((self.rain_and_irrigation - self.recharge_to_upper_layer) / self.Saturated_Water_Content / self.Root_Depth / 10, 1)
+    #     leaching_ammonium_lower_layer = max(0, self.nitrate_lower_layer + (self.mineralized_nitrate_lower_layer - self.denitrification_upper_layer) * self.time_change_constant - (150 - self.Root_Depth) / 150 * self.groundwater_recharge) * min(self.groundwater_recharge / self.Saturated_Water_Content / (150 - self.Root_Depth) / 10, 1)
+    #     leaching_nitrate_upper_layer = max(0, (self.total_nitrate_nitrogen_supply - self.nitrate_nitrogen_uptake) * self.time_change_constant - self.Root_Depth / 150 * self.groundwater_recharge) * min((self.rain_and_irrigation - self.recharge_to_upper_layer) / self.Saturated_Water_Content / self.Root_Depth / 10, 1)
         
     #     # Nitrogen layer adjustments due to root depth ratio
     #     layer_adjustment_ammonium = root_depth_ratio / (150.0 - self.Root_Depth) * self.ammonium_lower_layer

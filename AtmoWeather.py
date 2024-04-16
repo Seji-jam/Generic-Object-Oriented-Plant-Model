@@ -55,7 +55,7 @@ class WeatherMeteo:
                 'Max_Temp': Max_Temp, 'Min_Temp': Min_Temp, 'Solar_Radiation': Solar_Radiation,'Rain':Rain, 'Vapour_Pressure': Vapour_Pressure,
                 'Wind_Speed': Wind_Speed, 'Day_time_Temp': Day_time_Temp, 'Night_Time_Temp': Night_Time_Temp,
                 # Add meteorological calculations
-                'Solar_Constant': Solar_Constant, 'Sin_Solar_Declination':Sin_Solar_Declination,'cosld':Cos_Solar_Declination,'Day_Length':Day_Length,
+                'Solar_Constant': Solar_Constant, 'Sin_Solar_Declination':Sin_Solar_Declination,'Cos_Solar_Declination':Cos_Solar_Declination,'Day_Length':Day_Length,
                 'Photoperiod_Day_Length':Photoperiod_Day_Length,'Daily_Sin_Beam_Exposure':Daily_Sin_Beam_Exposure
             }
 
