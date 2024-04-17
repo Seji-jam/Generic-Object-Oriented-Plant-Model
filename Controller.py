@@ -38,8 +38,10 @@ Soil_object=Soil.Soil( Inputs.Residual_Water_Content, Inputs.Saturated_Water_Con
              Inputs.nitrate_concentration_ppm,Inputs.ammonium_concentration_ppm,
              Inputs.Fertilizer_applications_count,Inputs.Fertilizer_applications_amount,Inputs.Fertilizer_applications_DAP,Inputs.Fraction_volatilization,
              )
-Leaf_object=Leaf.Leaf( Inputs.SLA_Const, Inputs.Leaf_Blade_Angle, Inputs.Leaf_Width,  Inputs.C3C4_Pathway, Inputs.Ambient_CO2,
+Leaf_object=Leaf.Leaf( Inputs.SLA_Const, Inputs.Min_Specific_Leaf_N, Inputs.Leaf_Blade_Angle, Inputs.Leaf_Width,  Inputs.C3C4_Pathway, Inputs.Ambient_CO2,
                       Inputs.Activation_Energy_JMAX, Inputs.VCMAX_LeafN_Slope, Inputs.JMAX_LeafN_Slope, Inputs.Photosynthetic_Light_Response_Factor )
+
+
 # Iterate over each timestep's weather data
 for day_data in weather_data:
     # Extract the necessary weather data for the current timestep
@@ -60,8 +62,7 @@ for day_data in weather_data:
 
 
     # The Leaf Area Update could be part of canopy as well
-    Leaf_object.Update_Leaf_Area(Canopy_object.Tot_Leaf_N,Canopy_object.CarbonFrac_Veg,
-                                 Canopy_object.Carbon_determined_LAI,Canopy_object.Min_Specific_Leaf_N)
+    Leaf_object.Update_Leaf_Area(Canopy_object.Tot_Leaf_N,Canopy_object.CarbonFrac_Veg, Canopy_object.Carbon_determined_LAI)
     Leaf_object.Update_Specific_Leaf_N(Canopy_object.Tot_Leaf_N)
 
     # =============================================================================
@@ -74,24 +75,30 @@ for day_data in weather_data:
 
 
     # Call the Leaf method with the current timestep's weather data --> for sunlit parts
-    Leaf_sunlit_object.Calculate_leaf_temp(Solar_Constant,Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Daily_Sin_Beam_Exposure, tmax, tmin, Vapour_Pressure, Wind_Speed,Canopy_object.Plant_Height)
-    Leaf_sunlit_object.Calculate_Potential_Photosynthesis(Solar_Constant,Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Daily_Sin_Beam_Exposure, tmax, tmin, Vapour_Pressure, Wind_Speed)
-    Leaf_sunlit_object.Calculate_Potential_transpiration(Solar_Constant,Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Daily_Sin_Beam_Exposure, tmax, tmin, Vapour_Pressure,Wind_Speed,Canopy_object.Plant_Height)
+    Leaf_sunlit_object.Calculate_Leaf_temp(Solar_Constant,Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Daily_Sin_Beam_Exposure, tmax, tmin, Vapour_Pressure, Wind_Speed,Canopy_object.Plant_Height,Leaf_object.C3C4_Pathway)
+   
+    Leaf_sunlit_object.Calculate_Potential_Photosynthesis(Solar_Constant,Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Daily_Sin_Beam_Exposure, tmax, tmin, Vapour_Pressure, Wind_Speed,Leaf_object.C3C4_Pathway)
+    Leaf_sunlit_object.Calculate_Potential_Transpiration(Solar_Constant,Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Daily_Sin_Beam_Exposure, tmax, tmin, Vapour_Pressure,Wind_Speed,Canopy_object.Plant_Height,Leaf_object.C3C4_Pathway)
     
     
     # Call the Leaf method with the current timestep's weather data --> for shaded parts
-    Leaf_shaded_object.Calculate_leaf_temp(Solar_Constant,Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Daily_Sin_Beam_Exposure, tmax, tmin, Vapour_Pressure, Wind_Speed,Canopy_object.Plant_Height)
-    Leaf_shaded_object.Calculate_Potential_Photosynthesis(Solar_Constant,Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Daily_Sin_Beam_Exposure, tmax, tmin, Vapour_Pressure, Wind_Speed)
-    Leaf_shaded_object.Calculate_Potential_transpiration(Solar_Constant,Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Daily_Sin_Beam_Exposure, tmax, tmin, Vapour_Pressure,Wind_Speed,Canopy_object.Plant_Height)
+    Leaf_shaded_object.Calculate_Leaf_temp(Solar_Constant,Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Daily_Sin_Beam_Exposure, tmax, tmin, Vapour_Pressure, Wind_Speed,Canopy_object.Plant_Height,Leaf_object.C3C4_Pathway)
+
+    Leaf_shaded_object.Calculate_Potential_Photosynthesis(Solar_Constant,Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Daily_Sin_Beam_Exposure, tmax, tmin, Vapour_Pressure, Wind_Speed,Leaf_object.C3C4_Pathway)
+ 
+    Leaf_shaded_object.Calculate_Potential_Transpiration(Solar_Constant,Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Daily_Sin_Beam_Exposure, tmax, tmin, Vapour_Pressure,Wind_Speed,Canopy_object.Plant_Height,Leaf_object.C3C4_Pathway)
     
     
     # =============================================================================
     # Updating Potential Canopy  PHOTOSYNTHESIS AND TRANSPIRATION
     # =============================================================================
-    Canopy_object.Update_Canopy_Temp("P",Leaf_object.hourly_Air_SU_leaf_T_diff,Leaf_object.hourly_Air_SH_leaf_T_diff,
-                            Leaf_object.hourly_SU_leaf_T, Leaf_object.hourly_SH_leaf_T)
-    Canopy_object.Update_Canopy_Photosyn("P",Leaf_object.hourly_photosyn_SU,Leaf_object.hourly_photosyn_SH,Day_Length)
-    Canopy_object.Update_Canopy_Transpiration("P",Leaf_object.hourly_transpiration_SU,Leaf_object.hourly_transpiration_SH,Day_Length)
+    Canopy_object.Update_Canopy_Temp("P",Leaf_object.hourly_Air_Sunlit_Leaf_Temp_diff,Leaf_object.hourly_Air_Shaded_Leaf_Temp_diff,
+                            Leaf_object.hourly_Sunlit_Leaf_Temp, Leaf_object.hourly_Shaded_Leaf_Temp)
+    
+    Canopy_object.Update_Canopy_Photosyn("P",Leaf_object.hourly_Photosynthesis_Sunlit,Leaf_object.hourly_Photosynthesis_Shaded,Day_Length)
+   
+    
+    Canopy_object.Update_Canopy_Transpiration("P",Leaf_object.hourly_Transpiration_Sunlit,Leaf_object.hourly_Transpiration_Shaded,Day_Length)
     
     
 
