@@ -2,8 +2,6 @@ import numpy as np
 import math
 import Leaf
 
-def SWITCH_FUN(x, y1, y2):
-    return y1 if x < 0 else y2
 wgauss = np.array([0.1184635, 0.2393144, 0.2844444, 0.2393144, 0.1184635])
 class Soil:
     def __init__(self, Residual_Water_Content, Saturated_Water_Content, field_capacity_water_content, water_content_initial,
@@ -60,7 +58,7 @@ class Soil:
         self.Fraction_volatilization=[Fraction_volatilization]
        
        
-        self.time_change_constant = 1 ########################## this is set as 1 day ... if the model changes to hourly this constant needs to be changed to 1/24
+        self.time_change_constant = 1 ########################## this is set as 1 day ... if the model changes to Hourly this constant needs to be changed to 1/24
 
         soil_mass = self.Soil_Depth_1 * soil_bulk_density * (1 - fraction_soil_greater_than_2mm) * 1000  # g.m-2
         organic_N_mass = organic_N_percentage * 0.01 * soil_mass  # g.m-2
@@ -75,27 +73,27 @@ class Soil:
 
         
         #initializing intermediate parameters
-        self.decomposition_rate_decomposable_pm = 0  # Rate of decomposition for decomposable plant material
-        self.decomposition_rate_resistant_pm = 0  # Rate of decomposition for resistant plant material
-        self.decomposition_rate_decomposable_pn = 0  # Rate of decomposition for decomposable plant nitrogen
-        self.decomposition_rate_resistant_pn = 0  # Rate of decomposition for resistant plant nitrogen
-        self.decomposition_rate_biomass = 0  # Rate of decomposition for biomass
-        self.decomposition_rate_humus = 0  # Rate of decomposition for humus
-        self.mineralized_nitrogen = 0  # Total mineralized nitrogen
-        self.mineralized_nitrogen_upper_layer = 0  # Mineralized nitrogen in the upper soil layer
-        self.mineralized_nitrogen_lower_layer = 0  # Mineralized nitrogen in the lower soil layer
+        # self.decomposition_rate_decomposable_pm = 0  # Rate of decomposition for decomposable plant material
+        # self.decomposition_rate_resistant_pm = 0  # Rate of decomposition for resistant plant material
+        # self.decomposition_rate_decomposable_pn = 0  # Rate of decomposition for decomposable plant nitrogen
+        # self.decomposition_rate_resistant_pn = 0  # Rate of decomposition for resistant plant nitrogen
+        # self.decomposition_rate_biomass = 0  # Rate of decomposition for biomass
+        # self.decomposition_rate_humus = 0  # Rate of decomposition for humus
+        # self.mineralized_nitrogen = 0  # Total mineralized nitrogen
+        # self.mineralized_nitrogen_upper_layer = 0  # Mineralized nitrogen in the upper soil layer
+        # self.mineralized_nitrogen_lower_layer = 0  # Mineralized nitrogen in the lower soil layer
         
-        self.nitrification_upper_layer = 0  # Nitrification rate in the upper soil layer
-        self.nitrification_lower_layer = 0  # Nitrification rate in the lower soil layer
-        self.mineralized_ammonium_upper_layer = 0  # Mineralized ammonium in the upper soil layer
-        self.mineralized_ammonium_lower_layer = 0  # Mineralized ammonium in the lower soil layer
+        # self.nitrification_upper_layer = 0  # Nitrification rate in the upper soil layer
+        # self.nitrification_lower_layer = 0  # Nitrification rate in the lower soil layer
+        # self.mineralized_ammonium_upper_layer = 0  # Mineralized ammonium in the upper soil layer
+        # self.mineralized_ammonium_lower_layer = 0  # Mineralized ammonium in the lower soil layer
 
         self.water_stress_factor = 0  # Factor indicating water stress
         self.nitrogen_uptake = 0  # Nitrogen uptake rate
 
 
-        self.hourly_Soil_Evap=[]
-        self.hourly_Soil_Rad=[]
+        self.Hourly_Soil_Evap=[]
+        self.Hourly_Soil_Rad=[]
 
 
         # Irrigation and fertilization can be input in the weather file as well! 
@@ -109,10 +107,10 @@ class Soil:
         # self.nitrate_nitrogen_application_schedule = [(5.0, 0), (15.0, 0), (25.0, 0), (35.0, 0), 
         #                                               (45.0, 0), (55.0, 0), (65.0, 0), (75.0, 0)]
 
-        self.deniul = 0  # Denitrification in the upper layer
-        self.denill = 0
-        self.nuptn = 0  # Nitrogen uptake in the nitrogen form
-        self.nupta= 0
+        # self.deniul = 0  # Denitrification in the upper layer
+        # self.denill = 0
+        # self.nuptn = 0  # Nitrogen uptake in the nitrogen form
+        # self.nupta= 0
 
 
 
@@ -166,360 +164,365 @@ class Soil:
         self.potential_SoilRad_daily = 0
         self.Day_Air_Soil_temp_dif  = 0
         self.Actual_evap_daily =0
-        self.hourly_rbhs=[]
-        self.hourly_rts=[]
+        self.Hourly_boundary_layer_resistance_soil=[]
+        self.Hourly_turbulence_resistance_soil=[]
         self.available_soluble_N=0
-
+        
+        self.soil_water_content_upper_layer = 0
+        self.soil_water_content_lower_layer = 0
+        self.daily_water_supply_for_et = 0
      
 
 
+    def switch_function(self,x, y1, y2):
+        return y1 if x < 0 else y2
         
     
-        def Calculate_Soil_Water_Content(self):
-            # Calculate the water content in the upper soil layer, adjusting for root depth
-            water_content_upper_layer = (self.Root_zone_soil_moisture + self.Residual_Water_Content * 10.0 * self.Root_Depth) / 10.0 / self.Root_Depth
-            
-            # Calculate the water content of the lower soil layer, considering the soil's root depth and making sure it doesn't exceed the saturated water content
-            water_content_lower_layer = min(self.Saturated_Water_Content, (self.Below_Root_zone_soil_moisture + self.Residual_Water_Content * 10.0 * (150.0 - self.Root_Depth)) / 10.0 / (150.0 - self.Root_Depth))
-            
-            # Determine the daily water supply available for evapotranspiration, with a safeguard for a minimum value
-            daily_water_supply_for_et =  max(0.1, self.water_content_upper_soil_layer / self.time_change_constant + 0.1)
-            
-            # Update the class attributes with the calculated values
-            self.soil_water_content_upper_layer = water_content_upper_layer
-            self.soil_water_content_lower_layer = water_content_lower_layer
-            self.daily_water_supply_for_et = daily_water_supply_for_et
-    
+    def Calculate_Soil_Water_Content(self):
+        # Calculate the water content in the upper soil layer, adjusting for root depth
+        water_content_upper_layer = (self.Root_zone_soil_moisture + self.Residual_Water_Content * 10.0 * self.Root_Depth) / 10.0 / self.Root_Depth
+        
+        # Calculate the water content of the lower soil layer, considering the soil's root depth and making sure it doesn't exceed the saturated water content
+        water_content_lower_layer = min(self.Saturated_Water_Content, (self.Below_Root_zone_soil_moisture + self.Residual_Water_Content * 10.0 * (150.0 - self.Root_Depth)) / 10.0 / (150.0 - self.Root_Depth))
+        
+        # Determine the daily water supply available for evapotranspiration, with a safeguard for a minimum value
+        daily_water_supply_for_et =  max(0.1, self.water_content_upper_soil_layer / self.time_change_constant + 0.1)
+        
+        # Update the class attributes with the calculated values
+        self.soil_water_content_upper_layer = water_content_upper_layer
+        self.soil_water_content_lower_layer = water_content_lower_layer
+        self.daily_water_supply_for_et = daily_water_supply_for_et
 
 
 
 
 
+
+
     
-        
-        def Calculate_Soil_Potential_Evaporation(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temperature, Min_Temperature, Vapour_Pressure_Deficit, Wind_Speed, Leaf_Blade_Angle, soil_resistance_to_evaporation, Total_Leaf_Area_Index, Light_Extinction_Coefficient, hourly_transpiration_Shaded, hourly_transpiration_Sunlit):
-                
-                # Convert daily climate data to hourly data
-                hourly_climate_data, gaussian_weights = Leaf.convert_daily_to_hourly(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temperature, Min_Temperature, Wind_Speed)
-                
-                hourly_Soil_Evap = []
-                hourly_Air_Soil_temp_dif = []
-                hourly_Soil_Rad = []
-                hourly_rbhs = []
-                hourly_rts = []
-        
-                for (hourly_Solar_Constant, hourly_temperature, hourly_sin_beam, hourly_diffuse_ratio, hourly_wind_speed), shaded_transpiration, sunlit_transpiration in zip(hourly_climate_data, hourly_transpiration_Shaded, hourly_transpiration_Sunlit):
-                    
-                    Incoming_PAR = 0.5 * Solar_Radiation  # Partition of incoming solar radiation to PAR
-                    Incoming_NIR = 0.5 * Solar_Radiation  # Partition of incoming solar radiation to NIR
-                    
-                    # Atmospheric transmissivity based on incoming PAR and solar geometry
-                    atmospheric_transmissivity = Incoming_PAR / (0.5 * hourly_Solar_Constant * hourly_sin_beam)
-        
-                    # Saturation vapor pressure and vapor pressure deficit calculations
-                    saturation_vapor_pressure = 0.611 * math.exp(17.4 * hourly_temperature / (hourly_temperature + 239.))
-                    vapor_pressure_deficit = max(0., saturation_vapor_pressure - Vapour_Pressure_Deficit)
-                    
-                    
-                    slope_vapor_pressure_temperature = 4158.6 * saturation_vapor_pressure / (hourly_temperature + 239.) ** 2
-    
-                    # Turbulence resistance for soil using logarithmic wind profile
-                    turbulence_resistance_soil = 0.74 * (np.log(56.)) ** 2 / (0.4 ** 2 * hourly_wind_speed)
-                    
-                    # Boundary layer resistance for soil considering wind speed and leaf area
-                    boundary_layer_resistance_soil = 172. * np.sqrt(0.05 / max(0.1, hourly_wind_speed * np.exp(-Light_Extinction_Coefficient * Total_Leaf_Area_Index)))
-                    
-                
-                
-                
-                    water_boundary_layer_resistance_soil = 0.93 * boundary_layer_resistance_soil
-                    
-                    # Calculation of the fractional diffuse light (frdf) based on atmospheric transmissivity
-                    if atmospheric_transmissivity < 0.22:
-                        fractional_diffuse_light = 1
-                    elif 0.22 < atmospheric_transmissivity <= 0.35:
-                        fractional_diffuse_light = 1 - 6.4 * (atmospheric_transmissivity - 0.22) ** 2
-                    else:
-                        fractional_diffuse_light = 1.47 - 1.66 * atmospheric_transmissivity
-        
-                    # Ensuring a minimum threshold for the fractional diffuse light
-                    fractional_diffuse_light = max(fractional_diffuse_light, 0.15 + 0.85 * (1 - np.exp(-0.1 / hourly_sin_beam)))
+    def Calculate_Soil_Potential_Evaporation(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temperature, Min_Temperature, Vapour_Pressure_Deficit, Wind_Speed, Leaf_Blade_Angle, soil_resistance_to_evaporation, Total_Leaf_Area_Index, Light_Extinction_Coefficient, Hourly_transpiration_Shaded, Hourly_transpiration_Sunlit):
             
-                    # Incoming diffuse PAR (PARDF) and direct PAR (PARDR) based on the calculated fractional diffuse light
-                    PAR_Diffuse = Incoming_PAR * fractional_diffuse_light
-                    PAR_Direct = Incoming_PAR - PAR_Diffuse
-        
-                    # Extinction and RefLection coefficients
-                    # Convert leaf blade angle from degrees to radians for calculations
-                    Leaf_Blade_Angle_Radians = Leaf_Blade_Angle * np.pi / 180
-                    
-                    # Calculate the direct beam extinction coefficient for PAR using leaf blade angle
-                    Direct_Beam_Extinction_Coefficient_PAR = Leaf.KDR_Coeff(hourly_sin_beam, Leaf_Blade_Angle_Radians)
-                    
-                    # Leaf scattering coefficients for PAR and NIR
-                    Scattering_Coefficient_PAR = 0.2  # Scattering coefficient for Photosynthetically Active Radiation
-                    Scattering_Coefficient_NIR = 0.8  # Scattering coefficient for Near-Infrared Radiation
-                    
-                    # Calculate diffuse extinction coefficients for PAR and NIR using total leaf area index and leaf blade angle
-                    Diffuse_Extinction_Coefficient_PAR = Leaf.KDF_Coeff(Total_Leaf_Area_Index, Leaf_Blade_Angle_Radians, Scattering_Coefficient_PAR)
-                    Diffuse_Extinction_Coefficient_NIR = Leaf.KDF_Coeff(Total_Leaf_Area_Index, Leaf_Blade_Angle_Radians, Scattering_Coefficient_NIR)
-                    
-                    # Calculate beam and canopy reflection coefficients for PAR and NIR
-                    Beam_Plus_Canopy_Reflection_Coefficient_PAR, Canopy_Reflection_Coefficient_PAR = Leaf.REFLECTION_Coeff(Scattering_Coefficient_PAR, Direct_Beam_Extinction_Coefficient_PAR)
-                    Beam_Plus_Canopy_Reflection_Coefficient_NIR, Canopy_Reflection_Coefficient_NIR = Leaf.REFLECTION_Coeff(Scattering_Coefficient_NIR, Direct_Beam_Extinction_Coefficient_PAR)
-        
-                    
-                    # Incoming diffuse NIR (NIRDF) and direct NIR (NIRDR)
-                    NIR_Diffuse = Incoming_NIR * fractional_diffuse_light
-                    NIR_Direct = Incoming_NIR - NIR_Diffuse
-                    
-                    # Absorbed total radiation (PAR + NIR) by soil
-                    soil_par_reflection = 0.1  # Soil PAR reflection coefficient
-                    # Soil NIR reflection coefficient, varying with soil water content (wcul)
-                    soil_nir_reflection = self.switch_function(self.soil_water_content_upper_layer - 0.5, 0.52 - 0.68 * self.soil_water_content_upper_layer, 0.18)
-                    absorbed_total_radiation_by_soil = (1 - soil_par_reflection) * (PAR_Direct * np.exp(-Beam_Plus_Canopy_Reflection_Coefficient_PAR * Total_Leaf_Area_Index) + PAR_Diffuse * np.exp(-Diffuse_Extinction_Coefficient_PAR * Total_Leaf_Area_Index)) + \
-                                                       (1 - soil_nir_reflection) * (NIR_Direct * np.exp(-Beam_Plus_Canopy_Reflection_Coefficient_NIR * Total_Leaf_Area_Index) + NIR_Diffuse * np.exp(-Diffuse_Extinction_Coefficient_NIR * Total_Leaf_Area_Index))
-                    # Calculate potential evaporation and net radiation using Penman-Monteith equation
-                    potential_evaporation, net_radiation = Leaf.Penman_Monteith(soil_resistance_to_evaporation, turbulence_resistance_soil, water_boundary_layer_resistance_soil, boundary_layer_resistance_soil, absorbed_total_radiation_by_soil, atmospheric_transmissivity, 1, hourly_temperature, vapor_pressure_deficit, slope_vapor_pressure_temperature, vapor_pressure_deficit)
-        
-                    # Proportional transpiration
-                    proportional_transpiration = (shaded_transpiration + sunlit_transpiration) * self.sd1 / self.Root_Depth
-        
-        
-                   # Daytime course of water supply
-                    water_supply = self.daily_water_supply * (hourly_sin_beam * Solar_Constant / 1367) / Daily_Sin_Beam_Exposure
-                    proportional_water_supply = water_supply * self.sd1 / self.Root_Depth
-                    
-                    potential_evaporation_soil = max(0, potential_evaporation)
-                    actual_evaporation_soil = min(potential_evaporation_soil, potential_evaporation_soil / (proportional_transpiration + potential_evaporation_soil) * proportional_water_supply)
-                    
-                    Latent_Heat_of_Water_Vaporization = 2.4E6  # Latent heat of vaporization (J/kg)
-                    Volumetric_Heat_Capacity_Air = 1200  # Volumetric heat capacity of air (J/m^3/°C)
-                    
-                    # Temperature difference driven by soil evaporation and net radiation
-                    temperature_difference_soil = self.Limit_Function(-25., 25., (net_radiation - Latent_Heat_of_Water_Vaporization * actual_evaporation_soil) * (boundary_layer_resistance_soil + turbulence_resistance_soil) / Volumetric_Heat_Capacity_Air) 
-                    
-                    average_soil_temperature = hourly_temperature + temperature_difference_soil
-                    
-                    # Recalculate potential evaporation with updated soil temperature
-                    saturation_vapor_pressure_soil = 0.611 * math.exp(17.4 * average_soil_temperature / (average_soil_temperature + 239.))
-                    slope_vapor_pressure_curve_soil = (saturation_vapor_pressure_soil - saturation_vapor_pressure) / self.Avoid_Zero_Division(temperature_difference_soil)
-                    potential_evaporation_second_estimate, net_radiation_second_estimate = Leaf.Penman_Monteith(soil_resistance_to_evaporation, turbulence_resistance_soil, water_boundary_layer_resistance_soil, boundary_layer_resistance_soil, absorbed_total_radiation_by_soil, atmospheric_transmissivity, 1, average_soil_temperature, Vapour_Pressure_Deficit, slope_vapor_pressure_curve_soil, vapor_pressure_deficit)
-                    potential_soil_evaporation = max(0, potential_evaporation_second_estimate)
-                    print(potential_soil_evaporation)
-                    hourly_Soil_Evap.append(potential_soil_evaporation)
-                    hourly_Soil_Rad.append(net_radiation_second_estimate)
-                    hourly_Air_Soil_temp_dif.append(temperature_difference_soil)
-                    hourly_rbhs.append(boundary_layer_resistance_soil)
-                    hourly_rts.append(turbulence_resistance_soil)
-    
-        
-        
-                    
-                self.hourly_Soil_Evap=hourly_Soil_Evap
-                self.hourly_Soil_Rad=hourly_Soil_Rad
-                self.hourly_Air_Soil_temp_dif=hourly_Air_Soil_temp_dif
-                self.hourly_rbhs=hourly_rbhs
-                self.hourly_rts=hourly_rts
-                
-                # Aggregate hourly data back to daily totals
-                potential_evap_daily = Leaf.Leaf.aggregate_to_daily(hourly_Soil_Evap,  Day_Length)
-                potential_SoilRad_daily = Leaf.Leaf.aggregate_to_daily(hourly_Soil_Rad,  Day_Length)
-                self.potential_evap_daily=potential_evap_daily    
-                self.potential_SoilRad_daily=potential_SoilRad_daily    
-                self.Day_Air_Soil_temp_dif=(hourly_Air_Soil_temp_dif * wgauss).sum()
-        
-    
-        def Update_Evaporation_if_WaterStress(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, daily_water_supply, soil_depth_1, Root_Depth, hourly_transpiration_Sunlit, hourly_transpiration_Shaded, hourly_Soil_Evap):
-            gaussian_points = 5
-            gaussian_weights_x = np.array([0.0469101, 0.2307534, 0.5000000, 0.7692465, 0.9530899])
-            gaussian_weights_w = np.array([0.1184635, 0.2393144, 0.2844444, 0.2393144, 0.1184635])
-            Latent_Heat_of_Vaporization = 2.4E6  # J/kg
-            Volumetric_Heat_Capacity_Air = 1200  # J/m^3/°C
-    
-            hourly_Actual_Soil_Evap = []
-            hourly_Air_Soil_Temperature_Difference = []
-    
-            for i, evap_potential, transp_sunlit, transp_shaded, solar_radiation, layer_resistance, turbulence_resistance in zip(range(gaussian_points), hourly_Soil_Evap, hourly_transpiration_Sunlit, hourly_transpiration_Shaded, self.hourly_Soil_Rad, self.hourly_Boundary_Layer_Resistance, self.hourly_Turbulence_Resistance):
-                hour = 12 - 0.5 * Day_Length + Day_Length * gaussian_weights_x[i]
-                Sin_Beam = max(0., Sin_Solar_Declination + Cos_Solar_Declination * np.cos(2. * np.pi * (hour - 12.) / 24.))
-    
-                # Diurnal availability of soil water supply
-                water_supply_hourly = daily_water_supply * (Sin_Beam * Solar_Constant / 1367) / Daily_Sin_Beam_Exposure
-    
-                # Available water for evaporation from the top soil layer
-                water_supply_for_evaporation = water_supply_hourly * (soil_depth_1 / Root_Depth)
-    
-                # Total canopy transpiration (sunlit + shaded)
-                total_canopy_transpiration = transp_sunlit + transp_shaded
-    
-                # Transpiration from the top soil layer
-                top_soil_layer_transpiration = total_canopy_transpiration * (soil_depth_1 / Root_Depth)
-    
-                # Maximum possible evaporation
-                Max_possible_evap = evap_potential / (evap_potential + top_soil_layer_transpiration) * water_supply_for_evaporation
-                Actual_Soil_Evap = Max_possible_evap if Max_possible_evap < evap_potential else evap_potential
-    
-                Actual_Air_Soil_Temperature_Difference = self.Limit_Function(-25., 25., (solar_radiation - Latent_Heat_of_Vaporization * Actual_Soil_Evap) * (layer_resistance + turbulence_resistance) / Volumetric_Heat_Capacity_Air)
-                hourly_Air_Soil_Temperature_Difference.append(Actual_Air_Soil_Temperature_Difference)
-                hourly_Actual_Soil_Evap.append(Actual_Soil_Evap)
-    
-            self.hourly_Actual_Soil_Evap = hourly_Actual_Soil_Evap
-            # Aggregation to daily air-soil temperature difference and actual daily evaporation
-            self.Day_Air_Soil_Temperature_Difference = np.dot(hourly_Air_Soil_Temperature_Difference, gaussian_weights_w).sum()
-            # Assuming `aggregate_to_daily` is a method that sums or averages hourly data to a daily total
-            self.Actual_Daily_Evaporation = np.dot(hourly_Actual_Soil_Evap, gaussian_weights_w).sum()
-            print(self.Actual_Daily_Evaporation)
-    
-    
-    
-    
-    
-    
-        def Calculate_Soil_Temperature(self, tmin, tmax):
-            # Calculate the daily average temperature with a weighted average favoring tmax
-            daily_avg_temperature = 0.29 * tmin + 0.71 * tmax
+            # Convert daily climate data to Hourly data
+            Hourly_climate_data, gaussian_weights = Leaf.Leaf.convert_daily_to_hourly(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temperature, Min_Temperature, Wind_Speed)
             
-            # Calculate the nightly average temperature with a weighted average favoring tmin
-            nightly_avg_temperature = 0.71 * tmin + 0.29 * tmax
+            Hourly_Soil_Evap = []
+            Hourly_Air_Soil_temp_dif = []
+            Hourly_Soil_Rad = []
+            Hourly_boundary_layer_resistance_soil=[]
+            Hourly_turbulence_resistance_soil=[]
+
+            for (Hourly_Solar_Constant, Hourly_temperature, Hourly_sin_beam, Hourly_diffuse_ratio, Hourly_wind_speed), shaded_transpiration, sunlit_transpiration in zip(Hourly_climate_data, Hourly_transpiration_Shaded, Hourly_transpiration_Sunlit):
+                
+                Incoming_PAR = 0.5 * Solar_Radiation  # Partition of incoming solar radiation to PAR
+                Incoming_NIR = 0.5 * Solar_Radiation  # Partition of incoming solar radiation to NIR
+                
+                # Atmospheric transmissivity based on incoming PAR and solar geometry
+                atmospheric_transmissivity = Incoming_PAR / (0.5 * Hourly_Solar_Constant * Hourly_sin_beam)
+    
+                # Saturation vapor pressure and vapor pressure deficit calculations
+                saturation_vapor_pressure = 0.611 * math.exp(17.4 * Hourly_temperature / (Hourly_temperature + 239.))
+                vapor_pressure_deficit = max(0., saturation_vapor_pressure - Vapour_Pressure_Deficit)
+                
+                
+                slope_vapor_pressure_temperature = 4158.6 * saturation_vapor_pressure / (Hourly_temperature + 239.) ** 2
+
+                # Turbulence resistance for soil using logarithmic wind profile
+                turbulence_resistance_soil = 0.74 * (np.log(56.)) ** 2 / (0.4 ** 2 * Hourly_wind_speed)
+                
+                # Boundary layer resistance for soil considering wind speed and leaf area
+                boundary_layer_resistance_soil = 172. * np.sqrt(0.05 / max(0.1, Hourly_wind_speed * np.exp(-Light_Extinction_Coefficient * Total_Leaf_Area_Index)))
+                
             
-            # Calculate the soil's average steady state temperature
-            soil_steady_state_avg_temp = (daily_avg_temperature + self.Day_Air_Soil_temp_dif + nightly_avg_temperature) / 2.
             
-            # Calculate the rate of change in soil temperature
-            rate_of_change_soil_temp = (soil_steady_state_avg_temp - self.initial_soil_temp) / self.time_change_constant
             
-            # Print the rate of change in soil temperature for debugging or information purposes
-            print(rate_of_change_soil_temp)
-            
-            # Update class attributes with the new calculated values
-            self.soil_steady_state_avg_temp = soil_steady_state_avg_temp
-            self.rate_of_change_soil_temp = rate_of_change_soil_temp
+                water_boundary_layer_resistance_soil = 0.93 * boundary_layer_resistance_soil
+                
+                # Calculation of the fractional diffuse light (frdf) based on atmospheric transmissivity
+                if atmospheric_transmissivity < 0.22:
+                    fractional_diffuse_light = 1
+                elif 0.22 < atmospheric_transmissivity <= 0.35:
+                    fractional_diffuse_light = 1 - 6.4 * (atmospheric_transmissivity - 0.22) ** 2
+                else:
+                    fractional_diffuse_light = 1.47 - 1.66 * atmospheric_transmissivity
+    
+                # Ensuring a minimum threshold for the fractional diffuse light
+                fractional_diffuse_light = max(fractional_diffuse_light, 0.15 + 0.85 * (1 - np.exp(-0.1 / Hourly_sin_beam)))
+        
+                # Incoming diffuse PAR (PARDF) and direct PAR (PARDR) based on the calculated fractional diffuse light
+                PAR_Diffuse = Incoming_PAR * fractional_diffuse_light
+                PAR_Direct = Incoming_PAR - PAR_Diffuse
+    
+                # Extinction and RefLection coefficients
+                # Convert leaf blade angle from degrees to radians for calculations
+                Leaf_Blade_Angle_Radians = Leaf_Blade_Angle * np.pi / 180
+                
+                # Calculate the direct beam extinction coefficient for PAR using leaf blade angle
+                Direct_Beam_Extinction_Coefficient_PAR = Leaf.Leaf.KDR_Coeff(Hourly_sin_beam, Leaf_Blade_Angle_Radians)
+                
+                # Leaf scattering coefficients for PAR and NIR
+                Scattering_Coefficient_PAR = 0.2  # Scattering coefficient for Photosynthetically Active Radiation
+                Scattering_Coefficient_NIR = 0.8  # Scattering coefficient for Near-Infrared Radiation
+                
+                # Calculate diffuse extinction coefficients for PAR and NIR using total leaf area index and leaf blade angle
+                Diffuse_Extinction_Coefficient_PAR = Leaf.Leaf.KDF_Coeff(Total_Leaf_Area_Index, Leaf_Blade_Angle_Radians, Scattering_Coefficient_PAR)
+                Diffuse_Extinction_Coefficient_NIR = Leaf.Leaf.KDF_Coeff(Total_Leaf_Area_Index, Leaf_Blade_Angle_Radians, Scattering_Coefficient_NIR)
+                
+                # Calculate beam and canopy reflection coefficients for PAR and NIR
+                Beam_Plus_Canopy_Reflection_Coefficient_PAR, Canopy_Reflection_Coefficient_PAR = Leaf.Leaf.REFLECTION_Coeff(Scattering_Coefficient_PAR, Direct_Beam_Extinction_Coefficient_PAR)
+                Beam_Plus_Canopy_Reflection_Coefficient_NIR, Canopy_Reflection_Coefficient_NIR = Leaf.Leaf.REFLECTION_Coeff(Scattering_Coefficient_NIR, Direct_Beam_Extinction_Coefficient_PAR)
+    
+                
+                # Incoming diffuse NIR (NIRDF) and direct NIR (NIRDR)
+                NIR_Diffuse = Incoming_NIR * fractional_diffuse_light
+                NIR_Direct = Incoming_NIR - NIR_Diffuse
+                
+                # Absorbed total radiation (PAR + NIR) by soil
+                soil_par_reflection = 0.1  # Soil PAR reflection coefficient
+                # Soil NIR reflection coefficient, varying with soil water content (wcul)
+                soil_nir_reflection = self.switch_function(self.soil_water_content_upper_layer - 0.5, 0.52 - 0.68 * self.soil_water_content_upper_layer, 0.18)
+                absorbed_total_radiation_by_soil = (1 - soil_par_reflection) * (PAR_Direct * np.exp(-Beam_Plus_Canopy_Reflection_Coefficient_PAR * Total_Leaf_Area_Index) + PAR_Diffuse * np.exp(-Diffuse_Extinction_Coefficient_PAR * Total_Leaf_Area_Index)) + \
+                                                   (1 - soil_nir_reflection) * (NIR_Direct * np.exp(-Beam_Plus_Canopy_Reflection_Coefficient_NIR * Total_Leaf_Area_Index) + NIR_Diffuse * np.exp(-Diffuse_Extinction_Coefficient_NIR * Total_Leaf_Area_Index))
+                # Calculate potential evaporation and net radiation using Penman-Monteith equation
+                potential_evaporation, net_radiation = Leaf.Leaf.Penman_Monteith(soil_resistance_to_evaporation, turbulence_resistance_soil, water_boundary_layer_resistance_soil, boundary_layer_resistance_soil, absorbed_total_radiation_by_soil, atmospheric_transmissivity, 1, Hourly_temperature, vapor_pressure_deficit, slope_vapor_pressure_temperature, vapor_pressure_deficit)
+    
+                # Proportional transpiration
+                proportional_transpiration = (shaded_transpiration + sunlit_transpiration) * self.Soil_Depth_1 / self.Root_Depth
     
     
+               # Daytime course of water supply
+                water_supply = self.daily_water_supply_for_et * (Hourly_sin_beam * Solar_Constant / 1367) / Daily_Sin_Beam_Exposure
+                proportional_water_supply = water_supply * self.Soil_Depth_1 / self.Root_Depth
+                
+                potential_evaporation_soil = max(0, potential_evaporation)
+                actual_evaporation_soil = min(potential_evaporation_soil, potential_evaporation_soil / (proportional_transpiration + potential_evaporation_soil) * proportional_water_supply)
+                
+                Latent_Heat_of_Water_Vaporization = 2.4E6  # Latent heat of vaporization (J/kg)
+                Volumetric_Heat_Capacity_Air = 1200  # Volumetric heat capacity of air (J/m^3/°C)
+                
+                # Temperature difference driven by soil evaporation and net radiation
+                temperature_difference_soil = self.Limit_Function(-25., 25., (net_radiation - Latent_Heat_of_Water_Vaporization * actual_evaporation_soil) * (boundary_layer_resistance_soil + turbulence_resistance_soil) / Volumetric_Heat_Capacity_Air) 
+                
+                average_soil_temperature = Hourly_temperature + temperature_difference_soil
+                
+                # Recalculate potential evaporation with updated soil temperature
+                saturation_vapor_pressure_soil = 0.611 * math.exp(17.4 * average_soil_temperature / (average_soil_temperature + 239.))
+                slope_vapor_pressure_curve_soil = (saturation_vapor_pressure_soil - saturation_vapor_pressure) / self.Avoid_Zero_Division(temperature_difference_soil)
+                potential_evaporation_second_estimate, net_radiation_second_estimate = Leaf.Leaf.Penman_Monteith(soil_resistance_to_evaporation, turbulence_resistance_soil, water_boundary_layer_resistance_soil, boundary_layer_resistance_soil, absorbed_total_radiation_by_soil, atmospheric_transmissivity, 1, average_soil_temperature, Vapour_Pressure_Deficit, slope_vapor_pressure_curve_soil, vapor_pressure_deficit)
+                potential_soil_evaporation = max(0, potential_evaporation_second_estimate)
+                print(potential_soil_evaporation)
+                Hourly_Soil_Evap.append(potential_soil_evaporation)
+                Hourly_Soil_Rad.append(net_radiation_second_estimate)
+                Hourly_Air_Soil_temp_dif.append(temperature_difference_soil)
+                Hourly_boundary_layer_resistance_soil.append(boundary_layer_resistance_soil)
+                Hourly_turbulence_resistance_soil.append(turbulence_resistance_soil)
+
     
-        def Calculate_Water_Balance(self, days_after_planting, rainfall, total_canopy_transpiration):
-                # Irrigation schedule: Days and corresponding irrigation amount
-                irrigation_schedule = [(5.0, 0), (15.0, 0), (25.0, 0), (35.0, 0), (45.0, 0), (55.0, 0), (65.0, 0), (75.0, 0), (85.0, 0), (95.0, 0)]
-                irrigation = sum([amount for day, amount in irrigation_schedule if day <= days_after_planting])
-                
-                # Sum of effective rainfall and irrigation
-                rain_and_irrigation = rainfall + irrigation
-                
-                # Recharges to upper and lower soil layers
-                recharge_to_upper_layer = min(10.0 * (self.Saturated_Water_Content - self.soil_water_content_upper_layer) * self.Root_Depth / self.time_change_constant, rain_and_irrigation)
-                recharge_to_lower_layer = min(10.0 * (self.Saturated_Water_Content - self.soil_water_content_lower_layer) * (150.0 - self.Root_Depth) / self.time_change_constant, rain_and_irrigation - recharge_to_upper_layer)
-                
-                # Groundwater recharge and water loss
-                groundwater_recharge = max(0., rain_and_irrigation - recharge_to_upper_layer - recharge_to_lower_layer)
-                water_loss_lower_layer = recharge_to_lower_layer - 10.0 * (self.soil_water_content_lower_layer - self.Residual_Water_Content) * self.Root_Depth
-                water_loss_upper_layer = recharge_to_upper_layer + 10.0 * (self.soil_water_content_lower_layer - self.Residual_Water_Content) * self.Root_Depth - self.switch_function(self.water_supply_switch, 0.0, total_canopy_transpiration) + 0.1
-                
-                # Update instance attributes with calculated values
-                self.rain_and_irrigation = rain_and_irrigation
-                self.recharge_to_upper_layer = recharge_to_upper_layer
-                self.recharge_to_lower_layer = recharge_to_lower_layer
-                self.groundwater_recharge = groundwater_recharge
-                self.water_loss_lower_layer = water_loss_lower_layer
-                self.water_loss_upper_layer = water_loss_upper_layer
     
+                
+            self.Hourly_Soil_Evap=Hourly_Soil_Evap
+            self.Hourly_Soil_Rad=Hourly_Soil_Rad
+            self.Hourly_Air_Soil_temp_dif=Hourly_Air_Soil_temp_dif
+            self.Hourly_boundary_layer_resistance_soil=Hourly_boundary_layer_resistance_soil
+            self.Hourly_turbulence_resistance_soil=Hourly_turbulence_resistance_soil
+            
+            # Aggregate Hourly data back to daily totals
+            potential_evap_daily = Leaf.Leaf.aggregate_to_daily(Hourly_Soil_Evap,  Day_Length)
+            potential_SoilRad_daily = Leaf.Leaf.aggregate_to_daily(Hourly_Soil_Rad,  Day_Length)
+            self.potential_evap_daily=potential_evap_daily    
+            self.potential_SoilRad_daily=potential_SoilRad_daily    
+            self.Day_Air_Soil_temp_dif=(Hourly_Air_Soil_temp_dif * wgauss).sum()
+    
+
+    def Update_Evaporation_if_WaterStress(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, daily_water_supply, soil_depth_1, Root_Depth, Hourly_transpiration_Sunlit, Hourly_transpiration_Shaded, Hourly_Soil_Evap):
+        gaussian_points = 5
+        gaussian_weights_x = np.array([0.0469101, 0.2307534, 0.5000000, 0.7692465, 0.9530899])
+        gaussian_weights_w = np.array([0.1184635, 0.2393144, 0.2844444, 0.2393144, 0.1184635])
+        Latent_Heat_of_Vaporization = 2.4E6  # J/kg
+        Volumetric_Heat_Capacity_Air = 1200  # J/m^3/°C
+
+        Hourly_Actual_Soil_Evap = []
+        Hourly_Air_Soil_Temperature_Difference = []
+
+        for i, evap_potential, transp_sunlit, transp_shaded, solar_radiation, layer_resistance, turbulence_resistance in zip(range(gaussian_points), Hourly_Soil_Evap, Hourly_transpiration_Sunlit, Hourly_transpiration_Shaded, self.Hourly_Soil_Rad, self.Hourly_Boundary_Layer_Resistance, self.Hourly_Turbulence_Resistance):
+            hour = 12 - 0.5 * Day_Length + Day_Length * gaussian_weights_x[i]
+            Sin_Beam = max(0., Sin_Solar_Declination + Cos_Solar_Declination * np.cos(2. * np.pi * (hour - 12.) / 24.))
+
+            # Diurnal availability of soil water supply
+            water_supply_Hourly = daily_water_supply * (Sin_Beam * Solar_Constant / 1367) / Daily_Sin_Beam_Exposure
+
+            # Available water for evaporation from the top soil layer
+            water_supply_for_evaporation = water_supply_Hourly * (soil_depth_1 / Root_Depth)
+
+            # Total canopy transpiration (sunlit + shaded)
+            total_canopy_transpiration = transp_sunlit + transp_shaded
+
+            # Transpiration from the top soil layer
+            top_soil_layer_transpiration = total_canopy_transpiration * (soil_depth_1 / Root_Depth)
+
+            # Maximum possible evaporation
+            Max_possible_evap = evap_potential / (evap_potential + top_soil_layer_transpiration) * water_supply_for_evaporation
+            Actual_Soil_Evap = Max_possible_evap if Max_possible_evap < evap_potential else evap_potential
+
+            Actual_Air_Soil_Temperature_Difference = self.Limit_Function(-25., 25., (solar_radiation - Latent_Heat_of_Vaporization * Actual_Soil_Evap) * (layer_resistance + turbulence_resistance) / Volumetric_Heat_Capacity_Air)
+            Hourly_Air_Soil_Temperature_Difference.append(Actual_Air_Soil_Temperature_Difference)
+            Hourly_Actual_Soil_Evap.append(Actual_Soil_Evap)
+
+        self.Hourly_Actual_Soil_Evap = Hourly_Actual_Soil_Evap
+        # Aggregation to daily air-soil temperature difference and actual daily evaporation
+        self.Day_Air_Soil_Temperature_Difference = np.dot(Hourly_Air_Soil_Temperature_Difference, gaussian_weights_w).sum()
+        # Assuming `aggregate_to_daily` is a method that sums or averages Hourly data to a daily total
+        self.Actual_Daily_Evaporation = np.dot(Hourly_Actual_Soil_Evap, gaussian_weights_w).sum()
+        print(self.Actual_Daily_Evaporation)
+
+
+
+
+
+
+    def Calculate_Soil_Temperature(self, tmin, tmax):
+        # Calculate the daily average temperature with a weighted average favoring tmax
+        daily_avg_temperature = 0.29 * tmin + 0.71 * tmax
+        
+        # Calculate the nightly average temperature with a weighted average favoring tmin
+        nightly_avg_temperature = 0.71 * tmin + 0.29 * tmax
+        
+        # Calculate the soil's average steady state temperature
+        soil_steady_state_avg_temp = (daily_avg_temperature + self.Day_Air_Soil_temp_dif + nightly_avg_temperature) / 2.
+        
+        # Calculate the rate of change in soil temperature
+        rate_of_change_soil_temp = (soil_steady_state_avg_temp - self.initial_soil_temp) / self.time_change_constant
+        
+        # Print the rate of change in soil temperature for debugging or information purposes
+        print(rate_of_change_soil_temp)
+        
+        # Update class attributes with the new calculated values
+        self.soil_steady_state_avg_temp = soil_steady_state_avg_temp
+        self.rate_of_change_soil_temp = rate_of_change_soil_temp
+
+
+
+    def Calculate_Water_Balance(self, days_after_planting, rainfall, total_canopy_transpiration):
+            # Irrigation schedule: Days and corresponding irrigation amount
+            irrigation_schedule = [(5.0, 0), (15.0, 0), (25.0, 0), (35.0, 0), (45.0, 0), (55.0, 0), (65.0, 0), (75.0, 0), (85.0, 0), (95.0, 0)]
+            irrigation = sum([amount for day, amount in irrigation_schedule if day <= days_after_planting])
+            
+            # Sum of effective rainfall and irrigation
+            rain_and_irrigation = rainfall + irrigation
+            
+            # Recharges to upper and lower soil layers
+            recharge_to_upper_layer = min(10.0 * (self.Saturated_Water_Content - self.soil_water_content_upper_layer) * self.Root_Depth / self.time_change_constant, rain_and_irrigation)
+            recharge_to_lower_layer = min(10.0 * (self.Saturated_Water_Content - self.soil_water_content_lower_layer) * (150.0 - self.Root_Depth) / self.time_change_constant, rain_and_irrigation - recharge_to_upper_layer)
+            
+            # Groundwater recharge and water loss
+            groundwater_recharge = max(0., rain_and_irrigation - recharge_to_upper_layer - recharge_to_lower_layer)
+            water_loss_lower_layer = recharge_to_lower_layer - 10.0 * (self.soil_water_content_lower_layer - self.Residual_Water_Content) * self.Root_Depth
+            water_loss_upper_layer = recharge_to_upper_layer + 10.0 * (self.soil_water_content_lower_layer - self.Residual_Water_Content) * self.Root_Depth - self.switch_function(self.water_supply_switch, 0.0, total_canopy_transpiration) + 0.1
+            
+            # Update instance attributes with calculated values
+            self.rain_and_irrigation = rain_and_irrigation
+            self.recharge_to_upper_layer = recharge_to_upper_layer
+            self.recharge_to_lower_layer = recharge_to_lower_layer
+            self.groundwater_recharge = groundwater_recharge
+            self.water_loss_lower_layer = water_loss_lower_layer
+            self.water_loss_upper_layer = water_loss_upper_layer
+
+   
+    
+    def Calculate_Soil_N_Dynamics(self):
+        N_mineralization_rate_constant = 24 * (math.exp(17.753 - 6350.5 / (self.soil_temperature + 273))) / 168
+        N_mineralization_factor = 1 - math.exp(-N_mineralization_rate_constant)
+        
+        # # Adjust for soil water content
+        # if fraction_transpirable_soil_water < 0.9:
+        #     mineralization_sensitivity = 1.111 * fraction_transpirable_soil_water
+        # else:
+        #     mineralization_sensitivity = 10 - 10 * fraction_transpirable_soil_water
+        # if mineralization_sensitivity < 0:
+        #     mineralization_sensitivity = 0
+        mineralization_sensitivity=1
+        
+        # Calculate net N mineralization
+        net_N_mineralization = mineralizable_organic_N * mineralization_sensitivity * N_mineralization_factor
+        # Apply threshold of 200 mgN.L-1
+        net_N_mineralization = net_N_mineralization * (0.0002 - self.N_concentration) / 0.0002
+        if net_N_mineralization < 0:
+            net_N_mineralization = 0
+        
        
         
-        def Calculate_Soil_N_Dynamics(self):
-            N_mineralization_rate_constant = 24 * (math.exp(17.753 - 6350.5 / (self.soil_temperature + 273))) / 168
-            N_mineralization_factor = 1 - math.exp(-N_mineralization_rate_constant)
+        if self.Days_after_planting == self.Fertilizer_applications_DAP[0]:  # Check if today matches any fertilization day
             
-            # # Adjust for soil water content
-            # if fraction_transpirable_soil_water < 0.9:
-            #     mineralization_sensitivity = 1.111 * fraction_transpirable_soil_water
-            # else:
-            #     mineralization_sensitivity = 10 - 10 * fraction_transpirable_soil_water
-            # if mineralization_sensitivity < 0:
-            #     mineralization_sensitivity = 0
-            mineralization_sensitivity=1
+            N_fertilization = self.Fertilizer_applications_amount[0]  # gN.m-2, N to be applied
+            volatilization_factor = self.Fraction_volatilization[0] / 100  # Convert percentage to decimal
             
-            # Calculate net N mineralization
-            net_N_mineralization = mineralizable_organic_N * mineralization_sensitivity * N_mineralization_factor
-            # Apply threshold of 200 mgN.L-1
-            net_N_mineralization = net_N_mineralization * (0.0002 - self.N_concentration) / 0.0002
-            if net_N_mineralization < 0:
-                net_N_mineralization = 0
+            self.Fertilizer_applications_DAP=Fertilizer_applications_DAP[1:]
+            self.Fertilizer_applications_amount=Fertilizer_applications_amount[1:]
+            self.volatilization_factor=volatilization_factor[1:]
+       
             
+            N_volatilization = volatilization_factor * N_fertilization  # gN.m-2, N volatilized
+       
+        else:
            
-            
-            if self.Days_after_planting == self.Fertilizer_applications_DAP[0]:  # Check if today matches any fertilization day
-                
-                N_fertilization = self.Fertilizer_applications_amount[0]  # gN.m-2, N to be applied
-                volatilization_factor = self.Fraction_volatilization[0] / 100  # Convert percentage to decimal
-                
-                self.Fertilizer_applications_DAP=Fertilizer_applications_DAP[1:]
-                self.Fertilizer_applications_amount=Fertilizer_applications_amount[1:]
-                self.volatilization_factor=volatilization_factor[1:]
-           
-                
-                N_volatilization = volatilization_factor * N_fertilization  # gN.m-2, N volatilized
-           
-            else:
-               
-               N_fertilization = N_volatilization = 0
-                 
-            
+           N_fertilization = N_volatilization = 0
              
-         
-            # Calculate N leaching based on soluble N, water, and drainage
-            #Assuming no water drainage otherwise         N_leaching = soluble_N * (DRAIN1 / (water + DRAIN1))  # gN.m-2
-            N_leaching = self.soluble_N 
-            
-            # Apply a threshold of 1 mgN.L-1 to the N concentration
-            if self.N_concentration <= 0.000001:
-                N_leaching = 0
-            
         
          
-                 
-            N_denitrification=0
-            if self.current_soil_mositure >=  self.Saturated_Water_Content:  # Condition for water saturation
-                adjusted_N_concentration = self.N_concentration
-                
-                # Apply threshold of 400 mgN.L-1 to the N concentration
-                if adjusted_N_concentration > 0.0004:
-                    adjusted_N_concentration = 0.0004
-            
-                # Calculate denitrification rate constant based on temperature
-                denitrification_rate_constant = 6 * math.exp(0.07735 * self.soil_temperature - 6.593)
-                
-                # Calculate N denitrification per g of water
-                N_denitrification = adjusted_N_concentration * (1 - math.exp(-denitrification_rate_constant))
-                
-                # Convert N denitrification to gN.m-2 based on water volume
-                N_denitrification = N_denitrification * water * 1000
-                            
-                
-            # Calculate the fraction of the top layer with roots
-            fraction_top_layer_with_roots = self.Root_Depth / self.Soil_Depth_1
-            if fraction_top_layer_with_roots > 1:
-                fraction_top_layer_with_roots = 1
-            
-            # Update soluble N content
-            self.soluble_N = (self.soluble_N + net_N_mineralization + 
-                                N_fertilization - N_volatilization -
-                                N_leaching - N_denitrification - self.total_nitrogen_uptake)
-            
-            # Recalculate N concentration in gN.g-1 H2O
-            self.N_concentration = self.soluble_N / (water * 1000)
-            
-            # Calculate available soluble N in the root zone based on a threshold of 1 mgN.L-1
-            available_soluble_N = (self.N_concentration - 0.000001) * self.soil_water_content_upper_layer * 1000 * fraction_top_layer_with_roots
-            if available_soluble_N < 0:
-                available_soluble_N = 0
-            
-            self.available_soluble_N=available_soluble_N
-            
+     
+        # Calculate N leaching based on soluble N, water, and drainage
+        #Assuming no water drainage otherwise         N_leaching = soluble_N * (DRAIN1 / (water + DRAIN1))  # gN.m-2
+        N_leaching = self.soluble_N 
+        
+        # Apply a threshold of 1 mgN.L-1 to the N concentration
+        if self.N_concentration <= 0.000001:
+            N_leaching = 0
+        
     
-    
-    
-    
-    
+     
+             
+        N_denitrification=0
+        if self.current_soil_mositure >=  self.Saturated_Water_Content:  # Condition for water saturation
+            adjusted_N_concentration = self.N_concentration
+            
+            # Apply threshold of 400 mgN.L-1 to the N concentration
+            if adjusted_N_concentration > 0.0004:
+                adjusted_N_concentration = 0.0004
+        
+            # Calculate denitrification rate constant based on temperature
+            denitrification_rate_constant = 6 * math.exp(0.07735 * self.soil_temperature - 6.593)
+            
+            # Calculate N denitrification per g of water
+            N_denitrification = adjusted_N_concentration * (1 - math.exp(-denitrification_rate_constant))
+            
+            # Convert N denitrification to gN.m-2 based on water volume
+            N_denitrification = N_denitrification * water * 1000
+                        
+            
+        # Calculate the fraction of the top layer with roots
+        fraction_top_layer_with_roots = self.Root_Depth / self.Soil_Depth_1
+        if fraction_top_layer_with_roots > 1:
+            fraction_top_layer_with_roots = 1
+        
+        # Update soluble N content
+        self.soluble_N = (self.soluble_N + net_N_mineralization + 
+                            N_fertilization - N_volatilization -
+                            N_leaching - N_denitrification - self.total_nitrogen_uptake)
+        
+        # Recalculate N concentration in gN.g-1 H2O
+        self.N_concentration = self.soluble_N / (water * 1000)
+        
+        # Calculate available soluble N in the root zone based on a threshold of 1 mgN.L-1
+        available_soluble_N = (self.N_concentration - 0.000001) * self.soil_water_content_upper_layer * 1000 * fraction_top_layer_with_roots
+        if available_soluble_N < 0:
+            available_soluble_N = 0
+        
+        self.available_soluble_N=available_soluble_N
+        
+
+
+
+
+
 
 
 

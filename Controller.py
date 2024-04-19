@@ -92,13 +92,13 @@ for day_data in weather_data:
     # =============================================================================
     # Updating Potential Canopy  PHOTOSYNTHESIS AND TRANSPIRATION
     # =============================================================================
-    Canopy_object.Update_Canopy_Temp("P",Leaf_object.hourly_Air_Sunlit_Leaf_Temp_diff,Leaf_object.hourly_Air_Shaded_Leaf_Temp_diff,
-                            Leaf_object.hourly_Sunlit_Leaf_Temp, Leaf_object.hourly_Shaded_Leaf_Temp)
+    Canopy_object.Update_Canopy_Temp("P",Leaf_object.Hourly_Air_Sunlit_Leaf_Temp_diff,Leaf_object.Hourly_Air_Shaded_Leaf_Temp_diff,
+                            Leaf_object.Hourly_Sunlit_Leaf_Temp, Leaf_object.Hourly_Shaded_Leaf_Temp)
     
-    Canopy_object.Update_Canopy_Photosyn("P",Leaf_object.hourly_Photosynthesis_Sunlit,Leaf_object.hourly_Photosynthesis_Shaded,Day_Length)
+    Canopy_object.Update_Canopy_Photosyn("P",Leaf_object.Hourly_Photosynthesis_Sunlit,Leaf_object.Hourly_Photosynthesis_Shaded,Day_Length)
    
     
-    Canopy_object.Update_Canopy_Transpiration("P",Leaf_object.hourly_Transpiration_Sunlit,Leaf_object.hourly_Transpiration_Shaded,Day_Length)
+    Canopy_object.Update_Canopy_Transpiration("P",Leaf_object.Hourly_Transpiration_Sunlit,Leaf_object.Hourly_Transpiration_Shaded,Day_Length)
     
     
 
@@ -107,12 +107,12 @@ for day_data in weather_data:
     # Calculating Potential Evaporation from soil
     # =============================================================================
 
-    Soil_object.Calculate_Soil_Water_Content()
+    # Soil_object.Calculate_Soil_Water_Content()
     
     Soil_object.Calculate_Soil_Potential_Evaporation(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Daily_Sin_Beam_Exposure, tmax, tmin, Vapour_Pressure,Wind_Speed,
                                                      Soil_object.soil_resistance_to_evaporation,Leaf_object.Leaf_Blade_Angle,
-                                                     Leaf_object.leaf_area_output['TLAI'],Leaf_object.leaf_area_output['KW'],
-                            Leaf_object.hourly_transpiration_SH,Leaf_object.hourly_transpiration_SU)
+                                                     Leaf_object.Leaf_area_output['Total_LAI'],Leaf_object.Leaf_area_output['Wind_Ext_Coeff'],
+                            Leaf_object.Hourly_Transpiration_Shaded,Leaf_object.Hourly_Transpiration_Sunlit)
 
 
 
@@ -123,26 +123,26 @@ for day_data in weather_data:
 
 
     Leaf_sunlit_object.Update_LeafTemp_Photosynthesis_if_WaterStress(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Daily_Sin_Beam_Exposure, tmax, tmin, Vapour_Pressure, Wind_Speed,Canopy_object.Plant_Height,
-                           Soil_object.dwsup,Soil_object.Soil_Depth_1,Soil_object.Root_Depth, 
-                           Leaf_object.hourly_SU_leaf_T, Leaf_object.hourly_SH_leaf_T,
-                           Soil_object.hourly_Soil_Evap)
+                           Soil_object.daily_water_supply_for_et,Soil_object.Soil_Depth_1,Soil_object.Root_Depth, 
+                           Leaf_object.Hourly_Sunlit_Leaf_Temp, Leaf_object.Hourly_Shaded_Leaf_Temp,
+                           Soil_object.Hourly_Soil_Evap,Leaf_object.C3C4_Pathway)
     Leaf_shaded_object.Update_LeafTemp_Photosynthesis_if_WaterStress(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Daily_Sin_Beam_Exposure, tmax, tmin, Vapour_Pressure, Wind_Speed,Canopy_object.Plant_Height,
-                           Soil_object.dwsup,Soil_object.Soil_Depth_1,Soil_object.Root_Depth, 
-                           Leaf_object.hourly_SU_leaf_T, Leaf_object.hourly_SH_leaf_T,
-                           Soil_object.hourly_Soil_Evap)
+                           Soil_object.daily_water_supply_for_et,Soil_object.Soil_Depth_1,Soil_object.Root_Depth, 
+                           Leaf_object.Hourly_Sunlit_Leaf_Temp, Leaf_object.Hourly_Shaded_Leaf_Temp,
+                           Soil_object.Hourly_Soil_Evap,Leaf_object.C3C4_Pathway)
     
 
-    Canopy_object.Update_Canopy_Temp("A",Leaf_object.hourly_Actual_Air_SU_leaf_T_diff,Leaf_object.hourly_Actual_Air_SH_leaf_T_diff,
-                            Leaf_object.hourly_Actual_SU_leaf_T, Leaf_object.hourly_Actual_SH_leaf_T)
-    Canopy_object.Update_Canopy_Photosyn("A",Leaf_object.Hourly_Actual_Photosynthesis_SU,Leaf_object.Hourly_Actual_Photosynthesis_SH,Day_Length)
-    Canopy_object.Update_Canopy_Transpiration("A",Leaf_object.Hourly_Actual_Transpiration_SU,Leaf_object.Hourly_Actual_Transpiration_SH,Day_Length)
+    Canopy_object.Update_Canopy_Temp("A",Leaf_object.Hourly_Actual_Air_Sunlit_Leaf_Temp_Diff,Leaf_object.Hourly_Actual_Air_Shaded_Leaf_Temp_Diff,
+                            Leaf_object.Hourly_Actual_Sunlit_Leaf_Temp, Leaf_object.Hourly_Actual_Shaded_Leaf_Temp)
+    Canopy_object.Update_Canopy_Photosyn("A",Leaf_object.Hourly_Actual_Photosynthesis_Sunlit,Leaf_object.Hourly_Actual_Photosynthesis_Shaded,Day_Length)
+    Canopy_object.Update_Canopy_Transpiration("A",Leaf_object.Hourly_Actual_Transpiration_Sunlit,Leaf_object.Hourly_Actual_Transpiration_Shaded,Day_Length)
     
     
 
 
     Soil_object.Update_Evaporation_if_WaterStress(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure,Soil_object.dwsup,Soil_object.Soil_Depth_1,Soil_object.Root_Depth,                                                  
-                                                       Leaf_object.hourly_transpiration_SU, Leaf_object.hourly_transpiration_SH,
-                                                       Soil_object.hourly_Soil_Evap,)
+                                                       Leaf_object.Hourly_transpiration_SU, Leaf_object.Hourly_transpiration_SH,
+                                                       Soil_object.Hourly_Soil_Evap,)
     
     Soil_object.Calculate_Soil_Temperature(tmin,tmax)
 

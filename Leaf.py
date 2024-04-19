@@ -55,41 +55,41 @@ class Leaf:
         self.specific_Leaf_N_output = {}
                
         
-        self.hourly_Air_Sunlit_Leaf_Temp_diff=[]
-        self.hourly_Air_Shaded_Leaf_Temp_diff=[]
+        self.Hourly_Air_Sunlit_Leaf_Temp_diff=[]
+        self.Hourly_Air_Shaded_Leaf_Temp_diff=[]
 
         
-        self.hourly_Sunlit_Leaf_Temp=[]
-        self.hourly_Shaded_Leaf_Temp=[]
+        self.Hourly_Sunlit_Leaf_Temp=[]
+        self.Hourly_Shaded_Leaf_Temp=[]
         
-        self.hourly_Photosynthesis_Sunlit=[]
-        self.hourly_Dark_Respiration_Sunlit=[]
-        self.hourly_Transpiration_Sunlit=[]
-        self.hourly_Absorbed_Radiation_Sunlit=[]
-        self.hourly_Stomatal_Resistance_Water_Sunlit=[]
-        self.hourly_Slope_VPD_Sunlit=[]
-        self.hourly_Absorbed_PAR_Sunlit=[]
+        self.Hourly_Photosynthesis_Sunlit=[]
+        self.Hourly_Dark_Respiration_Sunlit=[]
+        self.Hourly_Transpiration_Sunlit=[]
+        self.Hourly_Absorbed_Radiation_Sunlit=[]
+        self.Hourly_Stomatal_Resistance_Water_Sunlit=[]
+        self.Hourly_Slope_VPD_Sunlit=[]
+        self.Hourly_Absorbed_PAR_Sunlit=[]
 
 
         self.Hourly_Actual_Photosynthesis_Sunlit=[]
         self.Hourly_Actual_Transpiration_Sunlit=[]
-        self.hourly_Actual_Air_Sunlit_Leaf_Temp_diff=[]
-        self.hourly_Actual_Sunlit_Leaf_Temp=[]
+        self.Hourly_Actual_Air_Sunlit_Leaf_Temp_Diff=[]
+        self.Hourly_Actual_Sunlit_Leaf_Temp=[]
         
         
-        self.hourly_Photosynthesis_Shaded=[]
-        self.hourly_Dark_Respiration_Shaded=[]
-        self.hourly_Transpiration_Shaded=[]
-        self.hourly_Absorbed_Radiation_Shaded=[]
-        self.hourly_Stomatal_Resistance_Water_Shaded=[]
-        self.hourly_Slope_VPD_Shaded=[]
-        self.hourly_Absorbed_PAR_Shaded=[]
+        self.Hourly_Photosynthesis_Shaded=[]
+        self.Hourly_Dark_Respiration_Shaded=[]
+        self.Hourly_Transpiration_Shaded=[]
+        self.Hourly_Absorbed_Radiation_Shaded=[]
+        self.Hourly_Stomatal_Resistance_Water_Shaded=[]
+        self.Hourly_Slope_VPD_Shaded=[]
+        self.Hourly_Absorbed_PAR_Shaded=[]
 
         
         self.Hourly_Actual_Photosynthesis_Shaded=[]
         self.Hourly_Actual_Transpiration_Shaded=[]
-        self.hourly_Actual_Air_Shaded_Leaf_Temp_diff=[]
-        self.hourly_Actual_Shaded_Leaf_Temp=[]
+        self.Hourly_Actual_Air_Shaded_Leaf_Temp_Diff=[]
+        self.Hourly_Actual_Shaded_Leaf_Temp=[]
 
         # self.potential_photosyn_Sunlit_daily=0
         # self.dark_rsp_Sunlit_daily=0
@@ -187,13 +187,13 @@ class Leaf:
             'Specific_Leaf_N_Profile_with_Depth': Specific_Leaf_N_Profile_with_Depth,
         }
 
-    def aggregate_to_daily(hourly_results, Day_Length):
+    def aggregate_to_daily(Hourly_results, Day_Length):
        
         wgauss = np.array([0.1184635, 0.2393144, 0.2844444, 0.2393144, 0.1184635])
 
         var_daily = 0
         
-        for i, var_hourly in enumerate(hourly_results):
+        for i, var_hourly in enumerate(Hourly_results):
             var_daily += var_hourly * wgauss[i]
             # print(var_daily)
         # Convert to daily totals
@@ -207,16 +207,16 @@ class Leaf:
          x_Gauss = np.array([0.0469101, 0.2307534, 0.5000000, 0.7692465, 0.9530899])
          w_Gauss = np.array([0.1184635, 0.2393144, 0.2844444, 0.2393144, 0.1184635])
          
-         hourly_data = []
+         Hourly_data = []
          for i in range(Gaussian_Points):
              hour = 12 - 0.5 * Day_Length + Day_Length * x_Gauss[i]
              Solar_Elevation_Sin = max(0., Sin_Solar_Declination + Cos_Solar_Declination * np.cos(2. * np.pi * (hour - 12.) / 24.))
              Diffuse_Ratio = Solar_Radiation * (Solar_Elevation_Sin * Solar_Constant / 1367) / Daily_Sin_Beam_Exposure
              Hourly_Temp = Min_Temp + (Max_Temp - Min_Temp) * np.sin(np.pi * (hour + Day_Length / 2 - 12) / (Day_Length + 3))
              
-             hourly_data.append((Solar_Constant, Hourly_Temp, Solar_Elevation_Sin, Diffuse_Ratio, Wind))
+             Hourly_data.append((Solar_Constant, Hourly_Temp, Solar_Elevation_Sin, Diffuse_Ratio, Wind))
          
-         return hourly_data, w_Gauss
+         return Hourly_data, w_Gauss
     
     def INTERNAL_CO2(Leaf_Temp, VPD, VPD_Slope, Ambient_CO2, C3C4_Pathway):
 
@@ -420,11 +420,11 @@ class Leaf_sunlit(Leaf):
         Leaf_Nitro_Ext_Coeff = self.Leaf_object.Leaf_area_output['Leaf_Nitro_Ext_Coeff']
         Specific_Leaf_N_Top = self.Leaf_object.specific_Leaf_n_output['Specific_Leaf_N_Top']
 
-        hourly_data, w_Gauss = Leaf.convert_daily_to_hourly(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Wind_Speed)
-        hourly_Sunlit_Leaf_Temp = []
-        hourly_Air_Leaf_Temp_Diff = []
+        Hourly_data, w_Gauss = Leaf.convert_daily_to_hourly(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Wind_Speed)
+        Hourly_Sunlit_Leaf_Temp = []
+        Hourly_Air_Leaf_Temp_Diff = []
 
-        for Solar_Constant, Hourly_Temp, Sin_Beam, Diffuse_Ratio, Wind_Speed in hourly_data:
+        for Solar_Constant, Hourly_Temp, Sin_Beam, Diffuse_Ratio, Wind_Speed in Hourly_data:
             
             Incoming_PAR = 0.5 * Solar_Radiation
             Incoming_NIR = 0.5 * Solar_Radiation
@@ -517,11 +517,11 @@ class Leaf_sunlit(Leaf):
             Air_Leaf_Temp_Diff_Sunlit = (Net_Radiation_Absorbed_Sunlit - Latent_Heat_Vaporization * Transpiration_Sunlit) * (Boundary_Layer_Resistance_Heat_Sunlit_Adjusted + (Turbulence_Resistance * Sunlit_Fraction)) / Volumetric_Heat_Capacity_Air
             
             # Appending calculated temperature difference and adjusted Leaf temperature to lists
-            hourly_Air_Leaf_Temp_Diff.append(Air_Leaf_Temp_Diff_Sunlit)
+            Hourly_Air_Leaf_Temp_Diff.append(Air_Leaf_Temp_Diff_Sunlit)
             Adjusted_Leaf_Temp_Sunlit = Hourly_Temp + Air_Leaf_Temp_Diff_Sunlit
-            hourly_Sunlit_Leaf_Temp.append(Adjusted_Leaf_Temp_Sunlit)
-        self.Leaf_object.hourly_Sunlit_Leaf_Temp=hourly_Sunlit_Leaf_Temp
-        self.Leaf_object.hourly_Air_Sunlit_Leaf_Temp_diff=hourly_Air_Leaf_Temp_Diff             
+            Hourly_Sunlit_Leaf_Temp.append(Adjusted_Leaf_Temp_Sunlit)
+        self.Leaf_object.Hourly_Sunlit_Leaf_Temp=Hourly_Sunlit_Leaf_Temp
+        self.Leaf_object.Hourly_Air_Sunlit_Leaf_Temp_diff=Hourly_Air_Leaf_Temp_Diff             
         
     def Calculate_Potential_Photosynthesis(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, 
                                            Solar_Radiation, Max_Temp, Min_Temp, Vapour_Pressure, Wind_Speed,C3C4_Pathway):
@@ -532,14 +532,14 @@ class Leaf_sunlit(Leaf):
         Specific_Leaf_N_Top = self.Leaf_object.specific_Leaf_n_output['Specific_Leaf_N_Top']
     
         # Convert daily data to hourly
-        hourly_data, _ = Leaf.convert_daily_to_hourly(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Wind_Speed)
+        Hourly_data, _ = Leaf.convert_daily_to_hourly(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Wind_Speed)
         
-        hourly_Sunlit_Leaf_Temp = self.Leaf_object.hourly_Sunlit_Leaf_Temp
+        Hourly_Sunlit_Leaf_Temp = self.Leaf_object.Hourly_Sunlit_Leaf_Temp
         
-        hourly_Photosynthesis = []
-        hourly_Dark_Respiration = []
+        Hourly_Photosynthesis = []
+        Hourly_Dark_Respiration = []
     
-        for (_, Hourly_Temp, Sin_Beam, Diffuse_Ratio, Wind_Speed), Sunlit_Leaf_Temp in zip(hourly_data, hourly_Sunlit_Leaf_Temp):
+        for (_, Hourly_Temp, Sin_Beam, Diffuse_Ratio, Wind_Speed), Sunlit_Leaf_Temp in zip(Hourly_data, Hourly_Sunlit_Leaf_Temp):
             # Use sunlit Leaf temperature if it differs from ambient
 
     
@@ -584,15 +584,15 @@ class Leaf_sunlit(Leaf):
             print("Potential Photosynthesis (Sunlit):", Potential_Photosynthesis_Sunlit)
             
             # Appending the calculated photosynthesis and respiration rates to their respective hourly lists
-            hourly_Photosynthesis.append(Potential_Photosynthesis_Sunlit)
-            hourly_Dark_Respiration.append(Dark_Respiration_Sunlit)
+            Hourly_Photosynthesis.append(Potential_Photosynthesis_Sunlit)
+            Hourly_Dark_Respiration.append(Dark_Respiration_Sunlit)
             
-            self.Leaf_object.hourly_Photosynthesis_Sunlit = hourly_Photosynthesis
-            self.Leaf_object.hourly_Dark_Respiration_Sunlit = hourly_Dark_Respiration
+            self.Leaf_object.Hourly_Photosynthesis_Sunlit = Hourly_Photosynthesis
+            self.Leaf_object.Hourly_Dark_Respiration_Sunlit = Hourly_Dark_Respiration
 
         # Aggregate hourly data back to daily totals
-        Daily_Potential_Photosynthesis_Sunlit = Leaf.aggregate_to_daily(hourly_Photosynthesis, Day_Length)
-        Daily_Dark_Respiration_Sunlit = Leaf.aggregate_to_daily(hourly_Dark_Respiration, Day_Length)
+        Daily_Potential_Photosynthesis_Sunlit = Leaf.aggregate_to_daily(Hourly_Photosynthesis, Day_Length)
+        Daily_Dark_Respiration_Sunlit = Leaf.aggregate_to_daily(Hourly_Dark_Respiration, Day_Length)
         
         self.Leaf_object.Daily_Potential_Photosynthesis_Sunlit = Daily_Potential_Photosynthesis_Sunlit
         self.Leaf_object.Daily_Dark_Respiration_Sunlit = Daily_Dark_Respiration_Sunlit
@@ -607,19 +607,19 @@ class Leaf_sunlit(Leaf):
         Final_LAI = self.Leaf_object.Leaf_area_output['Final_LAI']
         Wind_Ext_Coeff = self.Leaf_object.Leaf_area_output['Wind_Ext_Coeff']
     
-        hourly_data, _ = Leaf.convert_daily_to_hourly(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Wind_Speed)
+        Hourly_data, _ = Leaf.convert_daily_to_hourly(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Wind_Speed)
     
-        hourly_Sunlit_Leaf_Temp = self.Leaf_object.hourly_Sunlit_Leaf_Temp
-        hourly_Photosynthesis_Sunlit = self.Leaf_object.hourly_Photosynthesis_Sunlit
-        hourly_Dark_Respiration_Sunlit = self.Leaf_object.hourly_Dark_Respiration_Sunlit
+        Hourly_Sunlit_Leaf_Temp = self.Leaf_object.Hourly_Sunlit_Leaf_Temp
+        Hourly_Photosynthesis_Sunlit = self.Leaf_object.Hourly_Photosynthesis_Sunlit
+        Hourly_Dark_Respiration_Sunlit = self.Leaf_object.Hourly_Dark_Respiration_Sunlit
     
-        hourly_Transpiration_Sunlit = []
-        hourly_Absorbed_Radiation_Sunlit = []
-        hourly_Stomatal_Resistance_Water_Sunlit = []
-        hourly_Slope_VPD_Sunlit = []
-        hourly_Absorbed_PAR_Sunlit = []
+        Hourly_Transpiration_Sunlit = []
+        Hourly_Absorbed_Radiation_Sunlit = []
+        Hourly_Stomatal_Resistance_Water_Sunlit = []
+        Hourly_Slope_VPD_Sunlit = []
+        Hourly_Absorbed_PAR_Sunlit = []
     
-        for (_, Hourly_Temp, Sin_Beam, Diffuse_Ratio, Wind_Speed), Sunlit_Leaf_Temp, Photosynthesis_Sunlit, Dark_Respiration_Sunlit in zip(hourly_data, hourly_Sunlit_Leaf_Temp, hourly_Photosynthesis_Sunlit, hourly_Dark_Respiration_Sunlit):
+        for (_, Hourly_Temp, Sin_Beam, Diffuse_Ratio, Wind_Speed), Sunlit_Leaf_Temp, Photosynthesis_Sunlit, Dark_Respiration_Sunlit in zip(Hourly_data, Hourly_Sunlit_Leaf_Temp, Hourly_Photosynthesis_Sunlit, Hourly_Dark_Respiration_Sunlit):
 
             
             
@@ -703,35 +703,35 @@ class Leaf_sunlit(Leaf):
             Potential_Transpiration_Sunlit, Absorbed_Radiation_Sunlit = Leaf.Penman_Monteith(Stomatal_Resistance_Water_Sunlit, Turbulence_Resistance_Canopy * Sunlit_Fraction, Boundary_Layer_Resistance_Water_Sunlit, Boundary_Layer_Resistance_Heat_Sunlit_Adjusted, Total_Absorbed_Radiation_Sunlit, Atmospheric_Transmissivity, Sunlit_Fraction, Sunlit_Leaf_Temp, Vapour_Pressure, Slope_VPD, Vapour_Pressure_Deficit)
             
             # Updating the Leaf object with calculated hourly and potential daily transpiration rates, absorbed radiation, etc.
-            hourly_Transpiration_Sunlit.append(Potential_Transpiration_Sunlit)
-            hourly_Absorbed_Radiation_Sunlit.append(Absorbed_Radiation_Sunlit)
-            hourly_Stomatal_Resistance_Water_Sunlit.append(Stomatal_Resistance_Water_Sunlit)
-            hourly_Slope_VPD_Sunlit.append(Slope_VPD)
-            hourly_Absorbed_PAR_Sunlit.append(Absorbed_PAR_Sunlit)
+            Hourly_Transpiration_Sunlit.append(Potential_Transpiration_Sunlit)
+            Hourly_Absorbed_Radiation_Sunlit.append(Absorbed_Radiation_Sunlit)
+            Hourly_Stomatal_Resistance_Water_Sunlit.append(Stomatal_Resistance_Water_Sunlit)
+            Hourly_Slope_VPD_Sunlit.append(Slope_VPD)
+            Hourly_Absorbed_PAR_Sunlit.append(Absorbed_PAR_Sunlit)
             
         # Final aggregation to daily values might follow here
-        self.Leaf_object.Daily_Potential_Transpiration_Sunlit = Leaf.aggregate_to_daily(hourly_Transpiration_Sunlit, Day_Length)
-        self.Leaf_object.Daily_Absorbed_Radiation_Sunlit = Leaf.aggregate_to_daily(hourly_Absorbed_Radiation_Sunlit, Day_Length)
+        self.Leaf_object.Daily_Potential_Transpiration_Sunlit = Leaf.aggregate_to_daily(Hourly_Transpiration_Sunlit, Day_Length)
+        self.Leaf_object.Daily_Absorbed_Radiation_Sunlit = Leaf.aggregate_to_daily(Hourly_Absorbed_Radiation_Sunlit, Day_Length)
         
                 
-        self.Leaf_object.hourly_Transpiration_Sunlit = hourly_Transpiration_Sunlit
-        self.Leaf_object.hourly_Absorbed_Radiation_Sunlit = hourly_Absorbed_Radiation_Sunlit
-        self.Leaf_object.hourly_Stomatal_Resistance_Water_Sunlit = hourly_Stomatal_Resistance_Water_Sunlit
-        self.Leaf_object.hourly_Slope_VPD_Sunlit = hourly_Slope_VPD_Sunlit
-        self.Leaf_object.hourly_Absorbed_PAR_Sunlit = hourly_Absorbed_PAR_Sunlit
+        self.Leaf_object.Hourly_Transpiration_Sunlit = Hourly_Transpiration_Sunlit
+        self.Leaf_object.Hourly_Absorbed_Radiation_Sunlit = Hourly_Absorbed_Radiation_Sunlit
+        self.Leaf_object.Hourly_Stomatal_Resistance_Water_Sunlit = Hourly_Stomatal_Resistance_Water_Sunlit
+        self.Leaf_object.Hourly_Slope_VPD_Sunlit = Hourly_Slope_VPD_Sunlit
+        self.Leaf_object.Hourly_Absorbed_PAR_Sunlit = Hourly_Absorbed_PAR_Sunlit
         
         # Aggregate hourly data back to daily totals for a comprehensive daily overview
-        Daily_Absorbed_Radiation_Sunlit = Leaf.aggregate_to_daily(hourly_Absorbed_Radiation_Sunlit, Day_Length)
-        self.Leaf_object.Daily_Potential_Transpiration_Sunlit = Leaf.aggregate_to_daily(hourly_Transpiration_Sunlit, Day_Length)
+        Daily_Absorbed_Radiation_Sunlit = Leaf.aggregate_to_daily(Hourly_Absorbed_Radiation_Sunlit, Day_Length)
+        self.Leaf_object.Daily_Potential_Transpiration_Sunlit = Leaf.aggregate_to_daily(Hourly_Transpiration_Sunlit, Day_Length)
         # Optionally, aggregate other metrics like absorbed PAR if needed for further analysis
-        # self.Leaf_object.Daily_Absorbed_PAR_Sunlit = Leaf.aggregate_to_daily(hourly_Absorbed_PAR_Sunlit, Day_Length)
+        # self.Leaf_object.Daily_Absorbed_PAR_Sunlit = Leaf.aggregate_to_daily(Hourly_Absorbed_PAR_Sunlit, Day_Length)
         
         
         
         
     def Update_LeafTemp_Photosynthesis_if_WaterStress(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure,
                                                       Solar_Radiation, Max_Temp, Min_Temp, Vapour_Pressure, Wind_Speed, Plant_Height, Daily_Water_Supply,
-                                                      Soil_Depth_1, Root_Depth, hourly_Sunlit_Leaf_Temp, hourly_Shaded_Leaf_Temp, hourly_Soil_Evaporation,C3C4_Pathway):
+                                                      Soil_Depth_1, Root_Depth, Hourly_Sunlit_Leaf_Temp, Hourly_Shaded_Leaf_Temp, Hourly_Soil_Evaporation,C3C4_Pathway):
         Gaussian_Points = 5
         Gaussian_Weights = np.array([0.0469101, 0.2307534, 0.5000000, 0.7692465, 0.9530899])
     
@@ -743,21 +743,21 @@ class Leaf_sunlit(Leaf):
         Specific_Leaf_N_Top = self.Leaf_object.specific_Leaf_n_output['Specific_Leaf_N_Top']
         Specific_Leaf_N_Bottom = self.Leaf_object.specific_Leaf_n_output['Specific_Leaf_N_Top_Increment']
     
-        hourly_data, _ = Leaf.convert_daily_to_hourly(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Wind_Speed)
+        Hourly_data, _ = Leaf.convert_daily_to_hourly(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Wind_Speed)
     
         Actual_Photosynthesis_list = []
         Actual_Transpiration_list = []
         Actual_Air_Leaf_Temperature_Difference_list = []
         Actual_Leaf_Temperature_list = []
     
-        for i, (_, Hourly_Temp, Sin_Beam, Diffuse_Ratio, Wind_Speed), Transpiration_Sunlit, Transpiration_Shaded, Absorbed_Radiation_Sunlit, Stomatal_Resistance_Water_Sunlit, Slope_VPD, Soil_Evaporation in zip(range(Gaussian_Points), hourly_data,
-                                                                                                                                                                                                                  self.Leaf_object.hourly_Transpiration_Sunlit,
-                                                                                                                                                                                                                  self.Leaf_object.hourly_Transpiration_Shaded,
-                                                                                                                                                                                                                  self.Leaf_object.hourly_Absorbed_Radiation_Sunlit,
-                                                                                                                                                                                                                  self.Leaf_object.hourly_Stomatal_Resistance_Water_Sunlit,
-                                                                                                                                                                                                                  self.Leaf_object.hourly_Slope_VPD_Sunlit,
-                                                                                                                                                                                                                  hourly_Soil_Evaporation):
-    
+        for i, (_, Hourly_Temp, Sin_Beam, Diffuse_Ratio, Wind_Speed), Transpiration_Sunlit, Transpiration_Shaded, Absorbed_Radiation_Sunlit, Stomatal_Resistance_Water_Sunlit, Slope_VPD, Soil_Evaporation in zip(range(Gaussian_Points), Hourly_data,
+                                                                                                                                                                                                                  self.Leaf_object.Hourly_Transpiration_Sunlit,
+                                                                                                                                                                                                                  self.Leaf_object.Hourly_Transpiration_Shaded,
+                                                                                                                                                                                                                  self.Leaf_object.Hourly_Absorbed_Radiation_Sunlit,
+                                                                                                                                                                                                                  self.Leaf_object.Hourly_Stomatal_Resistance_Water_Sunlit,
+                                                                                                                                                                                                                  self.Leaf_object.Hourly_Slope_VPD_Sunlit,
+                                                                                                                                                                                                                  Hourly_Soil_Evaporation):
+
             Hour = 12 - 0.5 * Day_Length + Day_Length * Gaussian_Weights[i]
             Sin_Beam_Adjusted = max(0., Sin_Solar_Declination + Cos_Solar_Declination * np.cos(2. * np.pi * (Hour - 12.) / 24.))
             
@@ -845,7 +845,7 @@ class Leaf_sunlit(Leaf):
             Absorbed_PAR_Sunlit, _ = Leaf.LIGHT_ABSORB(Scattering_Coefficient_PAR, Direct_Beam_Extinction_Coefficient, Scattered_Beam_Extinction_Coefficient_PAR, Diffuse_Extinction_Coefficient_PAR, Canopy_Beam_Reflection_Coefficient_PAR, Canopy_Diffuse_Reflection_Coefficient_PAR, Direct_PAR, Diffuse_PAR, Final_LAI)
             
             # Adjusting photosynthetic nitrogen for sunlit parts of the canopy
-            Photosynthetic_Nitrogen_Sunlit = Specific_Leaf_N_Top * (1. - np.exp(-(Leaf_Nitrogen_Extinction_Coefficient + Direct_Beam_Extinction_Coefficient) * Final_LAI)) / (Leaf_Nitrogen_Extinction_Coefficient + Direct_Beam_Extinction_Coefficient) - self.Leaf_object.Specific_Leaf_N_Min * (1. - np.exp(-Direct_Beam_Extinction_Coefficient * Final_LAI)) / Direct_Beam_Extinction_Coefficient
+            Photosynthetic_Nitrogen_Sunlit = Specific_Leaf_N_Top * (1. - np.exp(-(Leaf_Nitrogen_Extinction_Coefficient + Direct_Beam_Extinction_Coefficient) * Final_LAI)) / (Leaf_Nitrogen_Extinction_Coefficient + Direct_Beam_Extinction_Coefficient) - self.Leaf_object.Min_Specific_Leaf_N * (1. - np.exp(-Direct_Beam_Extinction_Coefficient * Final_LAI)) / Direct_Beam_Extinction_Coefficient
             
             # Calculating internal CO2 and photosynthesis adjustments
             Sat_Vapor_Pressure_Leaf, Intercellular_CO2_Leaf = Leaf.INTERNAL_CO2(Adjusted_Leaf_Temperature, Vapour_Pressure, Vapor_Pressure_Deficit_Response, self.Leaf_object.Ambient_CO2, self.Leaf_object.C3C4_Pathway)
@@ -860,10 +860,10 @@ class Leaf_sunlit(Leaf):
             Actual_Air_Leaf_Temperature_Difference_list.append(Temperature_Difference)
             Actual_Leaf_Temperature_list.append(Adjusted_Leaf_Temperature)
         # Updating the Leaf model object with the calculated hourly values
-        self.Leaf_object.hourly_Actual_Photosynthesis_Sunlit = Actual_Photosynthesis_list
-        self.Leaf_object.hourly_Actual_Transpiration_Sunlit = Actual_Transpiration_list
-        self.Leaf_object.hourly_Actual_AirLeafTempDiff_Sunlit = Actual_Air_Leaf_Temperature_Difference_list
-        self.Leaf_object.hourly_Actual_LeafTemp_Sunlit = Actual_Leaf_Temperature_list
+        self.Leaf_object.Hourly_Actual_Photosynthesis_Sunlit = Actual_Photosynthesis_list
+        self.Leaf_object.Hourly_Actual_Transpiration_Sunlit = Actual_Transpiration_list
+        self.Leaf_object.Hourly_Actual_Air_Sunlit_Leaf_Temp_Diff = Actual_Air_Leaf_Temperature_Difference_list
+        self.Leaf_object.Hourly_Actual_Sunlit_Leaf_Temp = Actual_Leaf_Temperature_list
 
     
     
@@ -880,12 +880,12 @@ class Leaf_Shaded(Leaf):
         
         Specific_Leaf_N_Top = self.Leaf_object.specific_Leaf_n_output['Specific_Leaf_N_Top']
         
-        hourly_data, w_Gauss = Leaf.convert_daily_to_hourly(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Wind_Speed)
+        Hourly_data, w_Gauss = Leaf.convert_daily_to_hourly(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Wind_Speed)
 
-        hourly_Air_Temperature_Difference_Shaded = []
-        hourly_Shaded_Leaf_Temperature = []
+        Hourly_Air_Temperature_Difference_Shaded = []
+        Hourly_Shaded_Leaf_Temperature = []
         
-        for Solar_Constant, Hourly_Temp, Sin_Beam, Solar_Radiation, Wind_Speed in hourly_data:
+        for Solar_Constant, Hourly_Temp, Sin_Beam, Solar_Radiation, Wind_Speed in Hourly_data:
         
             Incoming_PAR = 0.5 * Solar_Radiation
             NIR = 0.5 * Solar_Radiation
@@ -974,13 +974,13 @@ class Leaf_Shaded(Leaf):
             Potential_Transpiration_Shaded, Net_Radiation_Absorbed_Shaded = Leaf.Penman_Monteith(Stomatal_Resist_Water_Shaded, Turbulence_Resist_Canopy, Boundary_Layer_Water_Resist_Shaded, Boundary_Layer_Heat_Resist_Shaded, Absorbed_Total_Radiation_Shaded, Atmospheric_Transmissivity, Fraction_Shaded, Hourly_Temp, Vapour_Pressure, Slope_SVP, Vapour_Pressure_Deficit)
             # Calculate Leaf temperature for shaded leaves
             Temperature_Difference_Shaded = (Net_Radiation_Absorbed_Shaded - Latent_Heat_Vaporization * Potential_Transpiration_Shaded) * (Boundary_Layer_Heat_Resist_Shaded + (Turbulence_Resist_Canopy * Fraction_Shaded)) / Volumetric_Heat_Capacity_Air
-            hourly_Air_Temperature_Difference_Shaded.append(Temperature_Difference_Shaded)
+            Hourly_Air_Temperature_Difference_Shaded.append(Temperature_Difference_Shaded)
             
             Shaded_Leaf_Temperature = Hourly_Temp + Temperature_Difference_Shaded
-            hourly_Shaded_Leaf_Temperature.append(Shaded_Leaf_Temperature)
+            Hourly_Shaded_Leaf_Temperature.append(Shaded_Leaf_Temperature)
 
-        self.Leaf_object.hourly_Shaded_Leaf_Temp=hourly_Shaded_Leaf_Temperature
-        self.Leaf_object.hourly_Air_Shaded_Leaf_Temp_diff=hourly_Air_Temperature_Difference_Shaded
+        self.Leaf_object.Hourly_Shaded_Leaf_Temp=Hourly_Shaded_Leaf_Temperature
+        self.Leaf_object.Hourly_Air_Shaded_Leaf_Temp_diff=Hourly_Air_Temperature_Difference_Shaded
 
 
     def Calculate_Potential_Photosynthesis(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure,
@@ -993,14 +993,14 @@ class Leaf_Shaded(Leaf):
         Specific_Leaf_N_Top = self.Leaf_object.specific_Leaf_n_output['Specific_Leaf_N_Top']
         
         # Convert daily conditions to hourly data for detailed analysis
-        hourly_conditions, w_Gauss = Leaf.convert_daily_to_hourly(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Daily_Solar_Radiation, Max_Temp, Min_Temp, Wind_Speed)
+        Hourly_conditions, w_Gauss = Leaf.convert_daily_to_hourly(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Daily_Solar_Radiation, Max_Temp, Min_Temp, Wind_Speed)
         
-        hourly_Shaded_Leaf_Temp = self.Leaf_object.hourly_Shaded_Leaf_Temp
+        Hourly_Shaded_Leaf_Temp = self.Leaf_object.Hourly_Shaded_Leaf_Temp
 
         # Initialize lists to store outputs for hourly calculations
-        hourly_Shaded_Leaf_Photosynthesis = []
-        hourly_Shaded_Dark_Respiration = []
-        for (Solar_Constant, Daytime_Temperature, Sin_Beam, Solar_Radiation, Wind_Speed), Shaded_Leaf_Temp in zip(hourly_conditions, hourly_Shaded_Leaf_Temp):
+        Hourly_Shaded_Leaf_Photosynthesis = []
+        Hourly_Shaded_Dark_Respiration = []
+        for (Solar_Constant, Daytime_Temperature, Sin_Beam, Solar_Radiation, Wind_Speed), Shaded_Leaf_Temp in zip(Hourly_conditions, Hourly_Shaded_Leaf_Temp):
 
             # Use Shaded_Leaf_Temp where Daytime_Temperature was used
             Incoming_PAR = 0.5 * Solar_Radiation
@@ -1042,15 +1042,15 @@ class Leaf_Shaded(Leaf):
             # Calculating potential photosynthesis and dark respiration for shaded leaves
             Potential_Photosynthesis_Shaded, Dark_Respiration_Shaded = Leaf.PHOTOSYN(self.Leaf_object.C3C4_Pathway, Absorbed_PAR_Shaded, Shaded_Leaf_Temp, Intercellular_CO2_Concentration, Photosynthetic_Nitrogen_Shaded, self.Leaf_object.Activation_Energy_Jmax,self.Leaf_object.Vcmax_LeafN_Slope, self.Leaf_object.Jmax_LeafN_Slope, self.Leaf_object.Photosynthetic_Light_Response_Factor)
             
-            hourly_Shaded_Leaf_Photosynthesis.append(Potential_Photosynthesis_Shaded)
-            hourly_Shaded_Dark_Respiration.append(Dark_Respiration_Shaded)
+            Hourly_Shaded_Leaf_Photosynthesis.append(Potential_Photosynthesis_Shaded)
+            Hourly_Shaded_Dark_Respiration.append(Dark_Respiration_Shaded)
             
-            self.Leaf_object.Hourly_Photosynthesis_Shaded = hourly_Shaded_Leaf_Photosynthesis
-            self.Leaf_object.Hourly_Dark_Respiration_Shaded = hourly_Shaded_Dark_Respiration
+            self.Leaf_object.Hourly_Photosynthesis_Shaded = Hourly_Shaded_Leaf_Photosynthesis
+            self.Leaf_object.Hourly_Dark_Respiration_Shaded = Hourly_Shaded_Dark_Respiration
             
         # Aggregate hourly data back to daily totals
-        Daily_Potential_Photosynthesis_Shaded = Leaf.aggregate_to_daily(hourly_Shaded_Leaf_Photosynthesis, Day_Length)
-        Daily_Dark_Respiration_Shaded = Leaf.aggregate_to_daily(hourly_Shaded_Dark_Respiration, Day_Length)
+        Daily_Potential_Photosynthesis_Shaded = Leaf.aggregate_to_daily(Hourly_Shaded_Leaf_Photosynthesis, Day_Length)
+        Daily_Dark_Respiration_Shaded = Leaf.aggregate_to_daily(Hourly_Shaded_Dark_Respiration, Day_Length)
         
         self.Leaf_object.Daily_Potential_Photosynthesis_Shaded = Daily_Potential_Photosynthesis_Shaded
         self.Leaf_object.Daily_Dark_Respiration_Shaded = Daily_Dark_Respiration_Shaded
@@ -1063,21 +1063,21 @@ class Leaf_Shaded(Leaf):
         Wind_Extinction_Coeff = self.Leaf_object.Leaf_area_output['Wind_Ext_Coeff']
     
     
-        hourly_conditions, w_Gauss = Leaf.convert_daily_to_hourly(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Wind_Speed)
+        Hourly_conditions, w_Gauss = Leaf.convert_daily_to_hourly(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Wind_Speed)
 
     
-        hourly_Shaded_Leaf_Temp = self.Leaf_object.hourly_Shaded_Leaf_Temp
-        hourly_Photosynthesis_Shaded = self.Leaf_object.hourly_Photosynthesis_Shaded
-        hourly_Dark_Respiration_Shaded = self.Leaf_object.hourly_Dark_Respiration_Shaded
+        Hourly_Shaded_Leaf_Temp = self.Leaf_object.Hourly_Shaded_Leaf_Temp
+        Hourly_Photosynthesis_Shaded = self.Leaf_object.Hourly_Photosynthesis_Shaded
+        Hourly_Dark_Respiration_Shaded = self.Leaf_object.Hourly_Dark_Respiration_Shaded
     
-        hourly_Transpiration_Shaded = []
-        hourly_Absorbed_Radiation_Shaded = []
-        hourly_Stomatal_Resist_Water_Shaded = []
-        hourly_SVP_Slope_Shaded = []
-        hourly_Absorbed_PAR_Shaded = []         
+        Hourly_Transpiration_Shaded = []
+        Hourly_Absorbed_Radiation_Shaded = []
+        Hourly_Stomatal_Resistance_Water_Shaded = []
+        Hourly_Slope_VPD_Shaded = []
+        Hourly_Absorbed_PAR_Shaded = []         
             
         
-        for (Solar_Constant, Hourly_Temperature, Sin_Beam, Diffuse_Ratio, Wind_Speed), Shaded_Leaf_Temp, Photosynthesis_Shaded, Dark_Respiration_Shaded in zip(hourly_conditions, hourly_Shaded_Leaf_Temp, hourly_Photosynthesis_Shaded, hourly_Dark_Respiration_Shaded):
+        for (Solar_Constant, Hourly_Temperature, Sin_Beam, Diffuse_Ratio, Wind_Speed), Shaded_Leaf_Temp, Photosynthesis_Shaded, Dark_Respiration_Shaded in zip(Hourly_conditions, Hourly_Shaded_Leaf_Temp, Hourly_Photosynthesis_Shaded, Hourly_Dark_Respiration_Shaded):
             
             Incoming_PAR = 0.5 * Solar_Radiation
             # Calculation of diffuse light fraction
@@ -1151,29 +1151,29 @@ class Leaf_Shaded(Leaf):
             Potential_Transpiration_Shaded, Absorbed_Radiation_Shaded = Leaf.Penman_Monteith(Adjusted_Stomatal_Resistance, Turbulence_Resistance * Fraction_Shaded, Shaded_Leaf_Boundary_Layer_Resistance_Water, Shaded_Leaf_Boundary_Layer_Resistance_Heat, Total_Absorbed_Radiation_Shaded, Atmospheric_Transmissivity, Fraction_Shaded, Shaded_Leaf_Temp, Vapour_Pressure, Slope_VPD_Response, Vapor_Pressure_Deficit)
             
             # Appending calculated values to their respective lists
-            hourly_Transpiration_Shaded.append(Potential_Transpiration_Shaded)
-            hourly_Absorbed_Radiation_Shaded.append(Absorbed_Radiation_Shaded)
-            hourly_Stomatal_Resist_Water_Shaded.append(Adjusted_Stomatal_Resistance)
-            hourly_SVP_Slope_Shaded.append(Slope_VPD_Response)
-            hourly_Absorbed_PAR_Shaded.append(Absorbed_PAR_Shaded)
+            Hourly_Transpiration_Shaded.append(Potential_Transpiration_Shaded)
+            Hourly_Absorbed_Radiation_Shaded.append(Absorbed_Radiation_Shaded)
+            Hourly_Stomatal_Resistance_Water_Shaded.append(Adjusted_Stomatal_Resistance)
+            Hourly_Slope_VPD_Shaded.append(Slope_VPD_Response)
+            Hourly_Absorbed_PAR_Shaded.append(Absorbed_PAR_Shaded)
             
-        self.Leaf_object.hourly_Transpiration_Shaded = hourly_Transpiration_Shaded
-        self.Leaf_object.hourly_Absorbed_Radiation_Shaded = hourly_Absorbed_Radiation_Shaded
-        self.Leaf_object.hourly_Stomatal_Resist_Water_Shaded = hourly_Stomatal_Resist_Water_Shaded
-        self.Leaf_object.hourly_SVP_Slope_Shaded = hourly_SVP_Slope_Shaded
-        self.Leaf_object.hourly_Absorbed_PAR_Shaded = hourly_Absorbed_PAR_Shaded
+        self.Leaf_object.Hourly_Transpiration_Shaded = Hourly_Transpiration_Shaded
+        self.Leaf_object.Hourly_Absorbed_Radiation_Shaded = Hourly_Absorbed_Radiation_Shaded
+        self.Leaf_object.Hourly_Stomatal_Resistance_Water_Shaded = Hourly_Stomatal_Resistance_Water_Shaded
+        self.Leaf_object.Hourly_Slope_VPD_Shaded = Hourly_Slope_VPD_Shaded
+        self.Leaf_object.Hourly_Absorbed_PAR_Shaded = Hourly_Absorbed_PAR_Shaded
 
 
         
-        potential_transpiration_Shaded_daily = Leaf.aggregate_to_daily(hourly_Transpiration_Shaded, Day_Length)
-        Daily_Absorbed_Radiation_Shaded = Leaf.aggregate_to_daily(hourly_Absorbed_Radiation_Shaded, Day_Length)
+        potential_transpiration_Shaded_daily = Leaf.aggregate_to_daily(Hourly_Transpiration_Shaded, Day_Length)
+        Daily_Absorbed_Radiation_Shaded = Leaf.aggregate_to_daily(Hourly_Absorbed_Radiation_Shaded, Day_Length)
         self.Leaf_object.potential_transpiration_Shaded_daily = potential_transpiration_Shaded_daily
         self.Leaf_object.Daily_Absorbed_Radiation_Shaded = Daily_Absorbed_Radiation_Shaded
                             
     def Update_LeafTemp_Photosynthesis_if_WaterStress(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Vapour_Pressure, Wind_Speed, Plant_Height,
                                                       Daily_Water_Supply, Soil_Depth_1, Root_Depth,
-                                                      hourly_Sunlit_Leaf_Temp, hourly_Shaded_Leaf_Temp,
-                                                      hourly_Soil_Evap,C3C4_Pathway):
+                                                      Hourly_Sunlit_Leaf_Temp, Hourly_Shaded_Leaf_Temp,
+                                                      Hourly_Soil_Evap,C3C4_Pathway):
     
         Gauss_Points = 5
         Gauss_Weights = np.array([0.0469101, 0.2307534, 0.5000000, 0.7692465, 0.9530899])
@@ -1185,21 +1185,24 @@ class Leaf_Shaded(Leaf):
         Specific_Leaf_N_Top = self.Leaf_object.specific_Leaf_n_output['Specific_Leaf_N_Top']
     
         # Convert daily data to hourly
-        hourly_data, _ = Leaf.convert_daily_to_hourly(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Wind_Speed)
-                           
+        Hourly_data, _ = Leaf.convert_daily_to_hourly(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Wind_Speed)
+
+        
         Actual_Photosynthesis = []
         Actual_Transpiration = []
         Actual_Air_Shaded_Leaf_Temp_Difference = []
         Actual_Shaded_Leaf_Temperature = []
 
-        for i, (Solar_Constant, Hourly_Temp, Sin_Beam, Diffuse_Ratio, Wind_Speed), Potential_Transpiration_Sunlit, Potential_Transpiration_Shaded, Radiation_Shaded, Stomatal_Resist_Water_Shaded, SVP_Slope_Shaded, Soil_Evaporation in zip(range(Gauss_Points), hourly_data,
-                                                                                                            self.Leaf_object.hourly_Transpiration_Sunlit,
-                                                                                                            self.Leaf_object.hourly_Transpiration_Shaded,
-                                                                                                            self.Leaf_object.hourly_Absorbed_Radiation_Shaded,
-                                                                                                            self.Leaf_object.hourly_Stomatal_Resistance_Water_Shaded,
-                                                                                                            self.Leaf_object.hourly_Slope_VPD_Shaded,
-                                                                                                            hourly_Soil_Evap):
         
+
+        for i, (Solar_Constant, Hourly_Temp, Sin_Beam, Diffuse_Ratio, Wind_Speed), Potential_Transpiration_Sunlit, Potential_Transpiration_Shaded, Radiation_Shaded, Stomatal_Resist_Water_Shaded, Slope_VPD, Soil_Evaporation in zip(range(Gauss_Points), Hourly_data,  
+                                                                                                                                                                                                                                             self.Leaf_object.Hourly_Transpiration_Sunlit,
+                                                                                                                                                                                                                                             self.Leaf_object.Hourly_Transpiration_Shaded, 
+                                                                                                                                                                                                                                             self.Leaf_object.Hourly_Absorbed_Radiation_Shaded,
+                                                                                                                                                                                                                                             self.Leaf_object.Hourly_Stomatal_Resistance_Water_Shaded,
+                                                                                                                                                                                                                                             self.Leaf_object.Hourly_Slope_VPD_Shaded,
+                                                                                                                                                                                                                                             Hourly_Soil_Evap):
+
             Hour = 12 - 0.5 * Day_Length + Day_Length * Gauss_Weights[i]
             Sin_Beam_Adjusted = max(0., Sin_Solar_Declination + Cos_Solar_Declination * np.cos(2. * np.pi * (Hour - 12.) / 24.))
             
@@ -1271,46 +1274,50 @@ class Leaf_Shaded(Leaf):
             Turbulence_Resistance_Canopy = 0.74 * (np.log((2. - 0.7 * Plant_Height) / (0.1 * Plant_Height))) ** 2 / (0.4 ** 2 * Wind_Speed)
             
             # Leaf temperature if water stress occurs
-            RT_Canopy = Turbulence_Resistance_Canopy * Fraction_Shaded
-            Temperature_Difference = Leaf.Limit_Function(-25., 25., (Radiation_Shaded - Latent_Heat_Vaporization * Actual_Transpiration_Shaded) * (Shaded_Leaf_Boundary_Layer_Resistance_Heat + RT_Canopy) / Volumetric_Heat_Capacity_Air)
+            Adjusted_Turbulence_Resistance = Turbulence_Resistance_Canopy * Fraction_Shaded
+            Temperature_Difference = Leaf.Limit_Function(-25., 25., (Radiation_Shaded - Latent_Heat_Vaporization * Actual_Transpiration_Shaded) * (Shaded_Leaf_Boundary_Layer_Resistance_Heat + Adjusted_Turbulence_Resistance) / Volumetric_Heat_Capacity_Air)
             
-            Leaf_Temperature = Hourly_Temp + Temperature_Difference
+            Adjusted_Leaf_Temperature = Hourly_Temp + Temperature_Difference
             
 
 
             # Stomatal resistance to water if water stress occurs
-            Adjusted_Stomatal_Resistance_Water_Stress = (Potential_Transpiration_Shaded - self.Leaf_object.hourly_Aradiation_Shaded) * (self.Leaf_object.hourly_slope_Shaded * (Shaded_Leaf_Boundary_Layer_Resistance_Heat + Turbulence_Resistance_Canopy) + Psychrometric_Constant * (Shaded_Leaf_Boundary_Layer_Resistance_Water + Turbulence_Resistance_Canopy)) / self.Leaf_object.hourly_Aradiation_Shaded / Psychrometric_Constant + Potential_Transpiration_Shaded / self.Leaf_object.hourly_Aradiation_Shaded * self.Leaf_object.hourly_rsw_Shaded
-            
+            Adjusted_Stomatal_Resistance_Water_Stress =        (Potential_Transpiration_Shaded - Actual_Transpiration_Shaded) * (Slope_VPD * (Shaded_Leaf_Boundary_Layer_Resistance_Heat + Adjusted_Turbulence_Resistance) + Psychrometric_Constant * (Shaded_Leaf_Boundary_Layer_Resistance_Water + Adjusted_Turbulence_Resistance)) / Actual_Transpiration_Shaded / Psychrometric_Constant + Potential_Transpiration_Shaded / Actual_Transpiration_Shaded * Stomatal_Resist_Water_Shaded
+
+
             # Absorbed PAR by shaded leaves
             _, Absorbed_PAR_Shaded = Leaf.LIGHT_ABSORB(Scattering_Coefficient_PAR, Direct_Beam_Extinction_Coefficient, Scattered_Beam_Extinction_Coefficient_PAR, Diffuse_Extinction_Coefficient_PAR, Canopy_Beam_Reflection_Coefficient_PAR, Canopy_Diffuse_Reflection_Coefficient_PAR, Direct_PAR, Diffuse_PAR, Leaf_Area_Index)
             
             # Total photosynthetic nitrogen in the canopy
-            Photosynthetic_Nitrogen_Canopy = (Specific_Leaf_N_Top * (1. - np.exp(-(Leaf_N_Extinction_Coeff + Direct_Beam_Extinction_Coefficient) * Leaf_Area_Index)) / (Leaf_N_Extinction_Coeff + Direct_Beam_Extinction_Coefficient) - self.Leaf_object.Minimum_Specific_Leaf_N * (1. - np.exp(-Direct_Beam_Extinction_Coefficient * Leaf_Area_Index)) / Direct_Beam_Extinction_Coefficient)
+            Photosynthetic_Nitrogen_Canopy = (Specific_Leaf_N_Top * (1. - np.exp(-(Leaf_N_Extinction_Coeff + Direct_Beam_Extinction_Coefficient) * Leaf_Area_Index)) / (Leaf_N_Extinction_Coeff + Direct_Beam_Extinction_Coefficient) - self.Leaf_object.Min_Specific_Leaf_N * (1. - np.exp(-Direct_Beam_Extinction_Coefficient * Leaf_Area_Index)) / Direct_Beam_Extinction_Coefficient)
             
 
             # Photosynthetic nitrogen for shaded parts of the canopy
-            Photosynthetic_Nitrogen_Shaded = Specific_Leaf_N_Top * (1. - np.exp(-(Leaf_N_Extinction_Coeff + Direct_Beam_Extinction_Coefficient) * Leaf_Area_Index)) / (Leaf_N_Extinction_Coeff + Direct_Beam_Extinction_Coefficient) - self.Leaf_object.Minimum_Specific_Leaf_N * (1. - np.exp(-Direct_Beam_Extinction_Coefficient * Leaf_Area_Index)) / Direct_Beam_Extinction_Coefficient
-            Photosynthetic_Nitrogen_Sunlit = Photosynthetic_Nitrogen_Canopy - Photosynthetic_Nitrogen_Shaded
+            Photosynthetic_Nitrogen_Sunlit = Specific_Leaf_N_Top * (1. - np.exp(-(Leaf_N_Extinction_Coeff + Direct_Beam_Extinction_Coefficient) * Leaf_Area_Index)) / (Leaf_N_Extinction_Coeff + Direct_Beam_Extinction_Coefficient) - self.Leaf_object.Min_Specific_Leaf_N * (1. - np.exp(-Direct_Beam_Extinction_Coefficient * Leaf_Area_Index)) / Direct_Beam_Extinction_Coefficient
+            Photosynthetic_Nitrogen_Shaded = Photosynthetic_Nitrogen_Canopy - Photosynthetic_Nitrogen_Sunlit
             
             # Calculating internal CO2 concentration and saturation vapor pressure
-            Saturation_Vapor_Pressure, Intercellular_CO2_Concentration = Leaf.INTERNAL_CO2(self.Leaf_object.hourly_Shaded_Leaf_Temp, Vapour_Pressure, Vapor_Pressure_Deficit_Response, self.Leaf_object.Ambient_CO2, self.Leaf_object.C3C4_Pathway)
-            Absorbed_PAR_Leaf, Dark_Respiration = Leaf.PHOTOSYN(self.Leaf_object.C3C4_Pathway, Absorbed_PAR_Shaded, self.Leaf_object.hourly_Shaded_Leaf_Temp, Intercellular_CO2_Concentration, Photosynthetic_Nitrogen_Shaded, self.Leaf_object.Activation_Energy_Jmax, self.Leaf_object.Vcmax_Nitrogen_Response, self.Leaf_object.Jmax_Nitrogen_Response, self.Leaf_object.Photosynthetic_Thermal_Tolerance)
+            Saturation_Vapor_Pressure, Intercellular_CO2_Concentration = Leaf.INTERNAL_CO2(Adjusted_Leaf_Temperature, Vapour_Pressure, Vapor_Pressure_Deficit_Response, self.Leaf_object.Ambient_CO2, self.Leaf_object.C3C4_Pathway)
             
+            Absorbed_PAR_Leaf, Dark_Respiration = Leaf.PHOTOSYN(self.Leaf_object.C3C4_Pathway, Absorbed_PAR_Shaded, Adjusted_Leaf_Temperature, Intercellular_CO2_Concentration, Photosynthetic_Nitrogen_Shaded, self.Leaf_object.Activation_Energy_Jmax, self.Leaf_object.Vcmax_LeafN_Slope, self.Leaf_object.Jmax_LeafN_Slope, self.Leaf_object.Photosynthetic_Light_Response_Factor)
+
             # Actual photosynthesis under water stress condition
-            Actual_Photosynthesis_Water_Stress = (1.6 * self.Leaf_object.hourly_rsw_Shaded + 1.3 * Shaded_Leaf_Boundary_Layer_Resistance_Water + Turbulence_Resistance_Canopy) / (1.6 * Adjusted_Stomatal_Resistance_Water_Stress + 1.3 * Shaded_Leaf_Boundary_Layer_Resistance_Water + Turbulence_Resistance_Canopy) * (Absorbed_PAR_Leaf - Dark_Respiration) + Dark_Respiration
-            
+            Actual_Photosynthesis_Water_Stress = (1.6 * Stomatal_Resist_Water_Shaded + 1.3 * Shaded_Leaf_Boundary_Layer_Resistance_Water + Turbulence_Resistance_Canopy) / (1.6 * Adjusted_Stomatal_Resistance_Water_Stress + 1.3 * Shaded_Leaf_Boundary_Layer_Resistance_Water + Turbulence_Resistance_Canopy) * (Absorbed_PAR_Leaf - Dark_Respiration) + Dark_Respiration
+
+
             # Appending the calculated values to their respective lists
             Actual_Photosynthesis.append(Actual_Photosynthesis_Water_Stress)
-            Actual_Transpiration.append(self.Leaf_object.hourly_Aradiation_Shaded)
+            Actual_Transpiration.append(self.Leaf_object.Hourly_Absorbed_Radiation_Shaded)
             Actual_Air_Shaded_Leaf_Temp_Difference.append(Temperature_Difference)
-            Actual_Shaded_Leaf_Temperature.append(self.Leaf_object.hourly_Shaded_Leaf_Temp)
+            print("******************************************************************************************")
+            print(Actual_Air_Shaded_Leaf_Temp_Difference)
+            Actual_Shaded_Leaf_Temperature.append(self.Leaf_object.Hourly_Shaded_Leaf_Temp)
             
         self.Leaf_object.Hourly_Actual_Photosynthesis_Shaded = Actual_Photosynthesis
         self.Leaf_object.Hourly_Actual_Transpiration_Shaded = Actual_Transpiration
         self.Leaf_object.Hourly_Actual_Air_Shaded_Leaf_Temp_Diff = Actual_Air_Shaded_Leaf_Temp_Difference
         self.Leaf_object.Hourly_Actual_Shaded_Leaf_Temp = Actual_Shaded_Leaf_Temperature
         
-
 
 
 

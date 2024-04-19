@@ -281,6 +281,7 @@ class Canopy:
             
             
     def Update_Canopy_Photosyn(self,State,photosyn_SU, photosyn_SH,dayl):
+        print(photosyn_SU, photosyn_SH)
         daily_average_canopy_photosyn =  self.Leaf_to_Canopy_Integration(photosyn_SU, photosyn_SH)
         State= State.lower()
         if State=='p':
