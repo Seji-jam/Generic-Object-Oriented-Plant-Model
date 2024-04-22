@@ -176,15 +176,17 @@ class Leaf:
         # Calculating specific Leaf nitrogen
         Specific_Leaf_N = Tot_Leaf_N / Final_LAI  # Average specific Leaf nitrogen
         Specific_Leaf_N_Top = Tot_Leaf_N * Leaf_Nitro_Ext_Coeff / (1. - np.exp(-Leaf_Nitro_Ext_Coeff * Final_LAI))  # For top leaves
+        
+        
+        Specific_Leaf_N_Bottom_Exponential_with_Depth = Tot_Leaf_N * Leaf_Nitro_Ext_Coeff * np.exp(-Leaf_Nitro_Ext_Coeff * Final_LAI) / (1. - np.exp(-Leaf_Nitro_Ext_Coeff * Final_LAI))  # Exponential nitrogen profile
         Specific_Leaf_N_Top_Increment = (Tot_Leaf_N + 0.001 * Tot_Leaf_N) * Leaf_Nitro_Ext_Coeff / (1. - np.exp(-Leaf_Nitro_Ext_Coeff * Final_LAI))  # With small nitrogen increment
-        Specific_Leaf_N_Profile_with_Depth = Tot_Leaf_N * Leaf_Nitro_Ext_Coeff * np.exp(-Leaf_Nitro_Ext_Coeff * Final_LAI) / (1. - np.exp(-Leaf_Nitro_Ext_Coeff * Final_LAI))  # Exponential nitrogen profile
 
         # Updating specific Leaf nitrogen outputs
         self.specific_Leaf_n_output = {
             'Specific_Leaf_N': Specific_Leaf_N,
             'Specific_Leaf_N_Top': Specific_Leaf_N_Top,
             'Specific_Leaf_N_Top_Increment': Specific_Leaf_N_Top_Increment,
-            'Specific_Leaf_N_Profile_with_Depth': Specific_Leaf_N_Profile_with_Depth,
+            'Specific_Leaf_N_Bottom_Exponential_with_Depth': Specific_Leaf_N_Bottom_Exponential_with_Depth,
         }
 
     def aggregate_to_daily(Hourly_results, Day_Length):

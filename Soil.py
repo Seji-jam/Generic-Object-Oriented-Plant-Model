@@ -343,7 +343,7 @@ class Soil:
         Hourly_Actual_Soil_Evap = []
         Hourly_Air_Soil_Temperature_Difference = []
 
-        for i, evap_potential, transp_sunlit, transp_shaded, solar_radiation, layer_resistance, turbulence_resistance in zip(range(gaussian_points), Hourly_Soil_Evap, Hourly_transpiration_Sunlit, Hourly_transpiration_Shaded, self.Hourly_Soil_Rad, self.Hourly_Boundary_Layer_Resistance, self.Hourly_Turbulence_Resistance):
+        for i, evap_potential, transp_sunlit, transp_shaded, solar_radiation, layer_resistance, turbulence_resistance in zip(range(gaussian_points), Hourly_Soil_Evap, Hourly_transpiration_Sunlit, Hourly_transpiration_Shaded, self.Hourly_Soil_Rad, self.Hourly_boundary_layer_resistance_soil, self.Hourly_turbulence_resistance_soil):
             hour = 12 - 0.5 * Day_Length + Day_Length * gaussian_weights_x[i]
             Sin_Beam = max(0., Sin_Solar_Declination + Cos_Solar_Declination * np.cos(2. * np.pi * (hour - 12.) / 24.))
 

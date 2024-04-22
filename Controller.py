@@ -24,7 +24,7 @@ Canopy_object=Canopy.Canopy(Inputs.BTemp_Phen, Inputs.OTemp_Phen, Inputs.CTemp_P
                             Inputs.CropType_Photoperiod, Inputs.StartPhotoperiod_Phase, Inputs.EndPhotoperiod_Phase, 
                             Inputs.Photoperiod_Sensitivity, Inputs.MinThermal_Day_Veg, Inputs.MinThermal_Day_Rep,
              Inputs.CarbonAlloc_Shoot, Inputs.NitrogenAlloc_Shoot, Inputs.Plant_Density, Inputs.Seed_Weight, 
-             Inputs.Crop_TypeDet, Inputs.EndSeedNum_DetPeriod, Inputs.SeedN_RemobFract, Inputs.SLA_Const, Inputs.Min_Specific_Leaf_N, Inputs.MinRootN_Conc,
+             Inputs.Crop_TypeDet, Inputs.EndSeedNum_DetPeriod, Inputs.Fraction_SeedNitrogen_Remobilizable, Inputs.SLA_Const, Inputs.Min_Specific_Leaf_N, Inputs.MinRootN_Conc,
              Inputs.CarbonCost_NFix, Inputs.MaxN_Uptake, Inputs.MinStemN_Conc,
              Inputs.IniLeafN_Conc, Inputs.MaxPlant_Height,
              Inputs.Legume,
@@ -140,9 +140,12 @@ for day_data in weather_data:
     
 
 
-    Soil_object.Update_Evaporation_if_WaterStress(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure,Soil_object.dwsup,Soil_object.Soil_Depth_1,Soil_object.Root_Depth,                                                  
-                                                       Leaf_object.Hourly_transpiration_SU, Leaf_object.Hourly_transpiration_SH,
+    Soil_object.Update_Evaporation_if_WaterStress(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure,Soil_object.daily_water_supply_for_et,
+                                                  Soil_object.Soil_Depth_1,Soil_object.Root_Depth,                                                  
+                                                       Leaf_object.Hourly_Transpiration_Sunlit, Leaf_object.Hourly_Transpiration_Shaded,
                                                        Soil_object.Hourly_Soil_Evap,)
+    
+    
     
     Soil_object.Calculate_Soil_Temperature(tmin,tmax)
 
@@ -151,11 +154,13 @@ for day_data in weather_data:
     # =============================================================================
     # Thermal units and initializing Canopy Carbon and Nitrogen Accumulation for Biomass formation
     # =============================================================================
-    Canopy_object.calculate_thermal_units(Canopy_object.ds, tmax, tmin, Day_Length, Canopy_object.BTemp_Phen, Canopy_object.OTemp_Phen, Canopy_object.CTemp_Phen, Canopy_object.TempCurve_Res)
-    Canopy_object.calculate_developement_rate(Canopy_object.ds, Canopy_object.CropType_Photoperiod, Day_Length, Canopy_object.StartPhotoperiod_Phase, Canopy_object.EndPhotoperiod_Phase,
+    Canopy_object.calculate_thermal_units(Canopy_object.Development_Stage, tmax, tmin, Day_Length, Canopy_object.BTemp_Phen, Canopy_object.OTemp_Phen, Canopy_object.CTemp_Phen, Canopy_object.TempCurve_Res)
+    
+    
+    Canopy_object.calculate_developement_rate(Canopy_object.Development_Stage, Canopy_object.CropType_Photoperiod, Day_Length, Canopy_object.StartPhotoperiod_Phase, Canopy_object.EndPhotoperiod_Phase,
                                               Canopy_object.Photoperiod_Sensitivity, Canopy_object.MinThermal_Day_Veg, Canopy_object.MinThermal_Day_Rep, Canopy_object.DailyThermalUnit)
        
-    Canopy_object.Initialize_Biomass_Formation(Canopy_object.LiveRoot_Carbon)
+    Canopy_object.Initialize_Biomass_Formation()
     
     Canopy_object.Initialize_Nitrogen_Accumulation()
     
@@ -173,13 +178,17 @@ for day_data in weather_data:
     
     Canopy_object.Calculate_Photo_Assimilates()
     
-    Canopy_object.Calculate_Crop_Nitrogen_Demand(Leaf_object.specific_leaf_n_output['Spec_Leaf_N'])
+    Canopy_object.Calculate_Crop_Nitrogen_Demand(Leaf_object.specific_Leaf_n_output['Specific_Leaf_N'])
     
-    Canopy_object.Calculate_Nitrogen_Partitioning(Leaf_object.specific_leaf_n_output['Spec_Leaf_N_Top_Increment'])
+    Canopy_object.Calculate_Nitrogen_Partitioning(Leaf_object.specific_Leaf_n_output['Specific_Leaf_N_Top_Increment'])
     
-    Canopy_object.Calculate_Seed_Properties(Determinate, End_SeedFill_Indeterminate, Nitrogen_Removal_EarlyFlowering, Nitrogen_Removal_EndSeedFill, Fraction_SeedNitrogen_Remobilizable, Expected_SeedNitrogen_Concentration, Seed_Weight)
-    
-    Canopy_object.Calculate_Senescence(Leaf_object.laic, Leaf_object.leaf_area_output['N_determined_LAI'], Canopy_object.Model_TimeStep)
+    Canopy_object.Calculate_Seed_Properties(Inputs.Crop_TypeDet, Canopy_object.EndSeedNum_DetPeriod,
+                                            Canopy_object.Remobilizable_N_seedgrowth_before_seedfilling,
+                                            Canopy_object.Remobilizable_N_seedgrowth_after_seedfilling, Inputs.Fraction_SeedNitrogen_Remobilizable, 
+                                            Inputs.Standard_SeedNitrogen_Conc, Canopy_object.Seed_Weight)
+
+
+    Canopy_object.Calculate_Senescence(Canopy_object.Carbon_determined_LAI, Leaf_object.Leaf_area_output['N_determined_LAI'], Canopy_object.Model_TimeStep)
     
     
     # =============================================================================
@@ -192,50 +201,52 @@ for day_data in weather_data:
 
     Canopy_object.Calculate_Carbon_Flow_Stem_Growth()
 
-    Root_object.Calculate_Root_Senescence(Canopy_object.carbon_structural_roots,Canopy_object.CarbonFrac_Veg, Canopy_object.MinRootN_Conc, Canopy_object.ReserveRoot_Carbon, Canopy_object.Nitrogen_Root)
+    Root_object.Calculate_Root_Senescence(Canopy_object.Root_Carbon,Canopy_object.CarbonFrac_Veg, Canopy_object.MinRootN_Conc, Canopy_object.Root_CarbonReserve, Canopy_object.Nitrogen_Root)
 
 
-    Canopy_object.Calculate_Carbon_Partitioning(Leaf_object.leaf_area_output['N_determined_LAI'],Leaf_object.laic, Root_object.csrtn)
+    Canopy_object.Calculate_Carbon_Partitioning(Leaf_object.Leaf_area_output['N_determined_LAI'],Canopy_object.Carbon_determined_LAI, Root_object.nitrogen_determined_Root_Carbon)
+    
     
     Canopy_object.Update_Carbon_Reserve_Pools()
     
-    Canopy_object.Calculate_Carbon_Production_Rate()
+    
+    Canopy_object.Calculate_Carbon_Production_Rate(Root_object.carbon_loss_rate_senescence)
     
     Canopy_object.Calculate_Biomass_Change_Rate()
     
-    Canopy_object.Calculate_Carbon_rates()
+    Canopy_object.Calculate_Carbon_Rates()
     
     
     # =============================================================================
     # Soil processes for caculating the state of carbon and Nitrogen for N uptake
     # =============================================================================
     
-    Soil_object.Organic_Carbon_Composition()
+    # Soil_object.Organic_Carbon_Composition()
     
-    Soil_object.Organic_Nitrogen_Composition(rain)
+    # Soil_object.Organic_Nitrogen_Composition(rain)
 
-    Soil_object.Calculate_Nitrogen_Uptake()
+    # Soil_object.Calculate_Nitrogen_Uptake()
     
     
     # =============================================================================
     # Canopy processes for updating Nitrogen dynamic based on the nitrogen absorption from soil
     # =============================================================================
  
-    Canopy_object.Calculate_Nitrogen_Dynamics()
+    Canopy_object.Calculate_Nitrogen_Dynamics(1)
     
-    Canopy_object.Calculate_Seed_Number_Rate()
+    Canopy_object.Calculate_Seed_Number_Rate(1,1)
     
-    Canopy_object.Calculate_Nitrogen_Accumulation_Rate()
+    Canopy_object.Calculate_Nitrogen_Accumulation_Rate(1,1,Inputs.Standard_SeedNitrogen_Conc)
     
-    Canopy_object.Calculate_Leaf_Area_ChangeRate(Leaf_object.specific_leaf_n_output['Spec_Leaf_N_Base_Calc'],Leaf_object.leaf_area_output['Leaf_Nitro_Ext_Coeff'])
+    Canopy_object.Calculate_Leaf_Area_ChangeRate(Canopy_object.Carbon_determined_LAI,Leaf_object.specific_Leaf_n_output['Specific_Leaf_N_Bottom_Exponential_with_Depth'],Leaf_object.Leaf_area_output['Leaf_Nitro_Ext_Coeff'])
 
-    Root_object.Calculate_Rooting_Depth()
+    Root_object.Calculate_Rooting_Depth(1,1,1)
 
-    Canopy_object.Calculate_Respiration_Rates()
+    Canopy_object.Calculate_Respiration_Rates(1,1,1)
     
-    Canopy_object.Calculate_Carbon_Nitrogen_Returns()
+    Canopy_object.Calculate_Carbon_Nitrogen_Returns(1,1,1)
     
-    Canopy_object.Check_Carbon_Nitrogen_Balance()
+    Canopy_object.Check_Carbon_Nitrogen_Balance(1)
     
 
     # =============================================================================
@@ -243,7 +254,7 @@ for day_data in weather_data:
     # =============================================================================
     Soil_object.Calculate_Water_Balance()
     
-    Soil_object.Calculate_Soil_Organic_Nitrogen_ChangeRate(dap,Root_object.Root_Depth)
+    Soil_object.Calculate_Soil_Organic_Nitrogen_ChangeRate(Days_after_planting,Root_object.Root_Depth)
     
     
     Soil_object.Calculate_Soil_Organic_Carbon_ChangeRate()
