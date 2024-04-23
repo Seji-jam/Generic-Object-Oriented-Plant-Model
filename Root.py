@@ -10,9 +10,9 @@ class Root:
         self.root_depth_initial = max(2.0, Soil_Depth_1)
         self.root_depth_current = self.root_depth_initial
         self.nitrogen_determined_Root_Carbon = 0
-        self.carbon_loss_rate_senescence = 0
+        self.Root_carbon_loss_rate_senescence = 0
         self.weight_roots_living = 0
-        self.nitrogen_loss_rate_senescence = 0
+        self.Root_nitrogen_loss_rate_senescence = 0
         self.carbon_dead_roots = 0
 
 
@@ -30,13 +30,13 @@ class Root:
     def Calculate_Root_Senescence(self, Root_Carbon,CarbonFrac_Veg,MinRootN_Conc,ReserveRoot_Carbon,Nitrogen_Root):
         Extinction_coefficient_root_N  = -np.log(0.05) / 6.3424 / CarbonFrac_Veg / self.Critical_root_weight_density / self.max_root_depth
         nitrogen_determined_Root_Carbon = 1 / Extinction_coefficient_root_N * math.log(1.0 + Extinction_coefficient_root_N * max(0.0, (Nitrogen_Root * CarbonFrac_Veg - ReserveRoot_Carbon * MinRootN_Conc)) / MinRootN_Conc)
-        carbon_loss_rate_senescence = max(min(Root_Carbon - 1.0e-4, Root_Carbon - min(nitrogen_determined_Root_Carbon, Root_Carbon)), 0.0) / self.Model_TimeStep
-        weight_roots_living = carbon_loss_rate_senescence / CarbonFrac_Veg
-        nitrogen_loss_rate_senescence = weight_roots_living * MinRootN_Conc
+        Root_carbon_loss_rate_senescence = max(min(Root_Carbon - 1.0e-4, Root_Carbon - min(nitrogen_determined_Root_Carbon, Root_Carbon)), 0.0) / self.Model_TimeStep
+        weight_roots_living = Root_carbon_loss_rate_senescence / CarbonFrac_Veg
+        Root_nitrogen_loss_rate_senescence = weight_roots_living * MinRootN_Conc
         self.weight_roots_living = weight_roots_living
-        self.nitrogen_loss_rate_senescence = nitrogen_loss_rate_senescence
+        self.Root_nitrogen_loss_rate_senescence = Root_nitrogen_loss_rate_senescence
         self.nitrogen_determined_Root_Carbon = nitrogen_determined_Root_Carbon
-        self.carbon_loss_rate_senescence = carbon_loss_rate_senescence
+        self.Root_carbon_loss_rate_senescence = Root_carbon_loss_rate_senescence
 
 
     def Calculate_Rooting_Depth(self, RootWeight_Rate, LiveRoot_Dry_Weight, DeadRoot_Dry_Weight):
@@ -45,5 +45,5 @@ class Root:
         self.root_depth_growth_rate = root_depth_growth_rate
 
     def Update_State_Variables(self):
-        self.carbon_dead_roots += self.carbon_loss_rate_senescence 
+        self.carbon_dead_roots += self.Root_carbon_loss_rate_senescence 
         self.root_depth_current += self.root_depth_growth_rate 

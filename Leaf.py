@@ -36,7 +36,6 @@ class Leaf:
     def __init__(self,  SLA_Const,Min_Specific_Leaf_N, Leaf_Blade_Angle, Leaf_Width, C3C4_Pathway, Ambient_CO2, Activation_Energy_Jmax,
                  Vcmax_LeafN_Slope, Jmax_LeafN_Slope, Photosynthetic_Light_Response_Factor ):
         self.Specific_Leaf_Area = SLA_Const
-        # self.LAI_ini = LAI_ini
         self.Leaf_Blade_Angle = Leaf_Blade_Angle
         self.Leaf_Width = Leaf_Width
         self.Min_Specific_Leaf_N = Min_Specific_Leaf_N
@@ -391,9 +390,7 @@ class Leaf:
         else:
             out = 1.0
         return out
-    
-    def Update_State_Variables(self,Rate_LeafAreaIndex):
-        self.LAI_ini += Rate_LeafAreaIndex
+
 
 
     def Limit_Function(xl, xh, x):
