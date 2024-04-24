@@ -113,6 +113,7 @@ class Soil:
         Total_Soil_Water_Content_Whole_Depth = (self.Residual_Soil_Moisture * self.Soil_Depth) + Current_Soil_Water_Content_Whole_Depth
         Soil_Moisture_Fraction_Whole_Depth=Current_Soil_Water_Content_Whole_Depth/Total_Soil_Water_Content_Whole_Depth
         
+        print(self.Current_Soil_Moisture_Top_Layer,self.Residual_Soil_Moisture,Current_Soil_Water_Content_Top_Layer)
         # Update the class attributes with the calculated values
         self.Current_Soil_Water_Content_Top_Layer = Current_Soil_Water_Content_Top_Layer
         self.Total_Soil_Water_Content_Top_Layer = Total_Soil_Water_Content_Top_Layer
@@ -136,10 +137,10 @@ class Soil:
             Hourly_boundary_layer_resistance_soil=[]
             Hourly_turbulence_resistance_soil=[]
 
-            for (Hourly_Solar_Constant, Hourly_temperature, Hourly_sin_beam, Hourly_diffuse_ratio, Hourly_wind_speed), shaded_transpiration, sunlit_transpiration in zip(Hourly_climate_data, Hourly_transpiration_Shaded, Hourly_transpiration_Sunlit):
+            for (Hourly_Solar_Constant, Hourly_temperature, Hourly_sin_beam, Hourly_Solar_Radiation, Hourly_wind_speed), shaded_transpiration, sunlit_transpiration in zip(Hourly_climate_data, Hourly_transpiration_Shaded, Hourly_transpiration_Sunlit):
                 
-                Incoming_PAR = 0.5 * Solar_Radiation  # Partition of incoming solar radiation to PAR
-                Incoming_NIR = 0.5 * Solar_Radiation  # Partition of incoming solar radiation to NIR
+                Incoming_PAR = 0.5 * Hourly_Solar_Radiation  # Partition of incoming solar radiation to PAR
+                Incoming_NIR = 0.5 * Hourly_Solar_Radiation  # Partition of incoming solar radiation to NIR
                 
                 # Atmospheric transmissivity based on incoming PAR and solar geometry
                 atmospheric_transmissivity = Incoming_PAR / (0.5 * Hourly_Solar_Constant * Hourly_sin_beam)
@@ -208,35 +209,38 @@ class Soil:
                 absorbed_total_radiation_by_soil = (1 - soil_par_reflection) * (PAR_Direct * np.exp(-Beam_Plus_Canopy_Reflection_Coefficient_PAR * Total_Leaf_Area_Index) + PAR_Diffuse * np.exp(-Diffuse_Extinction_Coefficient_PAR * Total_Leaf_Area_Index)) + \
                                                    (1 - soil_nir_reflection) * (NIR_Direct * np.exp(-Beam_Plus_Canopy_Reflection_Coefficient_NIR * Total_Leaf_Area_Index) + NIR_Diffuse * np.exp(-Diffuse_Extinction_Coefficient_NIR * Total_Leaf_Area_Index))
                 # Calculate potential evaporation and net radiation using Penman-Monteith equation
-                potential_evaporation, net_radiation = Leaf.Leaf.Penman_Monteith(soil_resistance_to_evaporation, turbulence_resistance_soil, water_boundary_layer_resistance_soil, boundary_layer_resistance_soil, absorbed_total_radiation_by_soil, atmospheric_transmissivity, 1, Hourly_temperature, vapor_pressure_deficit, slope_vapor_pressure_temperature, vapor_pressure_deficit)
-    
+                potential_evaporation, soil_absorbed_radiation = Leaf.Leaf.Penman_Monteith(soil_resistance_to_evaporation, turbulence_resistance_soil, water_boundary_layer_resistance_soil, boundary_layer_resistance_soil, absorbed_total_radiation_by_soil, atmospheric_transmissivity, 1, Hourly_temperature, vapor_pressure_deficit, slope_vapor_pressure_temperature, vapor_pressure_deficit)
+                #print(soil_absorbed_radiation)
                 # Proportional transpiration
-                proportional_transpiration = (shaded_transpiration + sunlit_transpiration) * self.Soil_Evaporative_Depth / self.Root_Depth
-    
+                potential_transpiration_from_evaporative_soil_layer  = (shaded_transpiration + sunlit_transpiration) * self.Soil_Evaporative_Depth / self.Root_Depth
+                #print(potential_transpiration_from_evaporative_soil_layer)    
     
                # Daytime course of water supply
                 water_supply = self.Total_Soil_Water_Content_Top_Layer * (Hourly_sin_beam * Solar_Constant / 1367) / Daily_Sin_Beam_Exposure
                 proportional_water_supply = water_supply * self.Soil_Evaporative_Depth / self.Root_Depth
                 
                 potential_evaporation_soil = max(0, potential_evaporation)
-                actual_evaporation_soil = min(potential_evaporation_soil, potential_evaporation_soil / (proportional_transpiration + potential_evaporation_soil) * proportional_water_supply)
+                actual_evaporation_soil = min(potential_evaporation_soil, potential_evaporation_soil / (potential_transpiration_from_evaporative_soil_layer + potential_evaporation_soil) * proportional_water_supply)
+                #print(potential_evaporation_soil, potential_transpiration_from_evaporative_soil_layer, proportional_water_supply)
+               
                 
                 Latent_Heat_of_Water_Vaporization = 2.4E6  # Latent heat of vaporization (J/kg)
                 Volumetric_Heat_Capacity_Air = 1200  # Volumetric heat capacity of air (J/m^3/°C)
                 
                 # Temperature difference driven by soil evaporation and net radiation
-                temperature_difference_soil = self.Limit_Function(-25., 25., (net_radiation - Latent_Heat_of_Water_Vaporization * actual_evaporation_soil) * (boundary_layer_resistance_soil + turbulence_resistance_soil) / Volumetric_Heat_Capacity_Air) 
-                
+                temperature_difference_soil = self.Limit_Function(-25., 25., (soil_absorbed_radiation - Latent_Heat_of_Water_Vaporization * actual_evaporation_soil) * (boundary_layer_resistance_soil + turbulence_resistance_soil) / Volumetric_Heat_Capacity_Air) 
+                print(soil_absorbed_radiation ,  actual_evaporation_soil, boundary_layer_resistance_soil , turbulence_resistance_soil)
                 average_soil_temperature = Hourly_temperature + temperature_difference_soil
                 
                 # Recalculate potential evaporation with updated soil temperature
                 saturation_vapor_pressure_soil = 0.611 * math.exp(17.4 * average_soil_temperature / (average_soil_temperature + 239.))
                 slope_vapor_pressure_curve_soil = (saturation_vapor_pressure_soil - saturation_vapor_pressure) / self.Avoid_Zero_Division(temperature_difference_soil)
-                potential_evaporation_second_estimate, net_radiation_second_estimate = Leaf.Leaf.Penman_Monteith(soil_resistance_to_evaporation, turbulence_resistance_soil, water_boundary_layer_resistance_soil, boundary_layer_resistance_soil, absorbed_total_radiation_by_soil, atmospheric_transmissivity, 1, average_soil_temperature, Vapour_Pressure_Deficit, slope_vapor_pressure_curve_soil, vapor_pressure_deficit)
+                potential_evaporation_second_estimate, soil_absorbed_radiation_second_estimate = Leaf.Leaf.Penman_Monteith(soil_resistance_to_evaporation, turbulence_resistance_soil, water_boundary_layer_resistance_soil, boundary_layer_resistance_soil, absorbed_total_radiation_by_soil, atmospheric_transmissivity, 1, average_soil_temperature, Vapour_Pressure_Deficit, slope_vapor_pressure_curve_soil, vapor_pressure_deficit)
                 potential_soil_evaporation = max(0, potential_evaporation_second_estimate)
-                print(potential_soil_evaporation)
+                #print(average_soil_temperature)
+                
                 Hourly_Soil_Evap.append(potential_soil_evaporation)
-                Hourly_Soil_Rad.append(net_radiation_second_estimate)
+                Hourly_Soil_Rad.append(soil_absorbed_radiation_second_estimate)
                 Hourly_Air_Soil_temp_dif.append(temperature_difference_soil)
                 Hourly_boundary_layer_resistance_soil.append(boundary_layer_resistance_soil)
                 Hourly_turbulence_resistance_soil.append(turbulence_resistance_soil)
@@ -268,7 +272,7 @@ class Soil:
         Hourly_Actual_Soil_Evap = []
         Hourly_Air_Soil_Temperature_Difference = []
 
-        for i, evap_potential, transp_sunlit, transp_shaded, solar_radiation, layer_resistance, turbulence_resistance in zip(range(gaussian_points), Hourly_Soil_Evap, Hourly_transpiration_Sunlit, Hourly_transpiration_Shaded, self.Hourly_Soil_Rad, self.Hourly_boundary_layer_resistance_soil, self.Hourly_turbulence_resistance_soil):
+        for i, evap_potential, transp_sunlit, transp_shaded, Hourly_Soil_Rad, layer_resistance, turbulence_resistance in zip(range(gaussian_points), Hourly_Soil_Evap, Hourly_transpiration_Sunlit, Hourly_transpiration_Shaded, self.Hourly_Soil_Rad, self.Hourly_boundary_layer_resistance_soil, self.Hourly_turbulence_resistance_soil):
             hour = 12 - 0.5 * Day_Length + Day_Length * gaussian_weights_x[i]
             Sin_Beam = max(0., Sin_Solar_Declination + Cos_Solar_Declination * np.cos(2. * np.pi * (hour - 12.) / 24.))
 
@@ -288,7 +292,7 @@ class Soil:
             Max_possible_evap = evap_potential / (evap_potential + top_soil_layer_transpiration) * water_supply_for_evaporation
             Actual_Soil_Evap = Max_possible_evap if Max_possible_evap < evap_potential else evap_potential
 
-            Actual_Air_Soil_Temperature_Difference = self.Limit_Function(-25., 25., (solar_radiation - Latent_Heat_of_Vaporization * Actual_Soil_Evap) * (layer_resistance + turbulence_resistance) / Volumetric_Heat_Capacity_Air)
+            Actual_Air_Soil_Temperature_Difference = self.Limit_Function(-25., 25., (Hourly_Soil_Rad - Latent_Heat_of_Vaporization * Actual_Soil_Evap) * (layer_resistance + turbulence_resistance) / Volumetric_Heat_Capacity_Air)
             Hourly_Air_Soil_Temperature_Difference.append(Actual_Air_Soil_Temperature_Difference)
             Hourly_Actual_Soil_Evap.append(Actual_Soil_Evap)
 
