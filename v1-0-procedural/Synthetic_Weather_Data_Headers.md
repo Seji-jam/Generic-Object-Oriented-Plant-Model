@@ -3,7 +3,7 @@
 | Month      | Month of the year for the recorded data, numeric (e.g., 4 for April, 5 for May). |
 | Year       | Year of the recorded data (e.g., 2023). |
 | doy        | Day of the year (doy), indicating the sequential (e.g. Julian) day number in the year. |
-| RDD        | Reference Daily Degree, a cumulative measure of heat suitable for plant growth, measured over the day. |
+| RDD        | Solar radiation (radiation (RD), daily (D)) |
 | TMMN       | Daily minimum temperature, typically measured in degrees Celsius. |
 | TMMX       | Daily maximum temperature, typically measured in degrees Celsius. |
 | VPD        | Vapor Pressure Deficit, indicating the difference between the saturation vapor pressure and the actual vapor pressure, measured in kilopascals (kPa). It reflects atmospheric dryness. |
