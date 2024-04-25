@@ -8,4 +8,4 @@
 | TMMX       | Daily maximum temperature, typically measured in degrees Celsius. |
 | VPD        | Vapor Pressure Deficit, indicating the difference between the saturation vapor pressure and the actual vapor pressure, measured in kilopascals (kPa). It reflects atmospheric dryness. |
 | U2         | Wind speed, recorded at 2 meters above the ground, measured in meters per second (m/s). |
-| P          | Precipitation recorded for the day, typically measured in millimeters (mm). |
+| P          | Precipitation recorded for the day, measured in millimeters (mm). |
