@@ -60,7 +60,7 @@ This repository contains the procedural process-based crop model developed by Sa
 | MaxES | Maximum expected size |
 | CarbonF | Carbon factor |
 | NUpTk | Nitrogen uptake |
-| LeafSA | Leaf surface area |
+| LeafSA | Leaf surface area OR specific area UNKNOWN CHECKING |
 | MinSLN | Minimum specific leaf nitrogen |
 | MinRCN | Minimum root carbon nitrogen |
 | StemNC | Stem nitrogen concentration |
