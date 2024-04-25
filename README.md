@@ -1,4 +1,4 @@
-# Python Version of Minimum Plant Model
+# Minimum Plant Model
 Derived from [Generic Crop Growth Model](https://github.com/RTGS-Lab/Generic_Crop_Growth/tree/main).
 
 # MPM Versions
