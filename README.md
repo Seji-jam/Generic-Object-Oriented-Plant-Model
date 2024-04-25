@@ -1,4 +1,4 @@
-# Skeleton of an OOP Minimum Plant Model
+# Interface Classes for First Draft OOP Minimum Plant Model
 This code served as the first artifact for thinking about the objects within the minimum plant model and their potential relations. The objective was to take a literal view of the soil, plant, and atmosphere as a physical entities and map computational objects onto these physical entities. This code serves as a computational artifact in the model iteration process.
 
 ## Class Diagram
