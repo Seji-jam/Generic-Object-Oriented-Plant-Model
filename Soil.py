@@ -64,7 +64,7 @@ class Soil:
 
         
         # Initial conditions and parameter calculations
-        root_depth_ini = max(2.0, Soil_Evaporative_Depth)
+        # root_depth_ini = max(2.0, Soil_Evaporative_Depth)
         # Root_zone_soil_moisture_initial = 10.0 * (self.Initial_Soil_Moisture - Residual_Soil_Moisture) * root_depth_ini
         # Below_Root_zone_soil_moisture_initial = 10.0 * (self.Initial_Soil_Moisture - Residual_Soil_Moisture) * (150.0 - root_depth_ini)
 
@@ -82,7 +82,7 @@ class Soil:
         self.ammonia_volatilization = 0
         # State variables
         self.Cumulative_Nitrogen_uptake = 0 
-        self.Root_Depth = root_depth_ini  
+        # self.Root_Depth = root_depth_ini  
         self.total_nitrogen_leached = 0
         self.soil_ammonium_volatilization_rate = 0
 
@@ -116,7 +116,7 @@ class Soil:
         Total_Soil_Water_Content_Whole_Depth = (self.Residual_Soil_Moisture * self.Soil_Depth) + Current_Soil_Water_Content_Whole_Depth
         Soil_Moisture_Fraction_Whole_Depth=Current_Soil_Water_Content_Whole_Depth/Total_Soil_Water_Content_Whole_Depth
         
-        print(self.Current_Soil_Moisture_Top_Layer,self.Residual_Soil_Moisture,Current_Soil_Water_Content_Top_Layer)
+        #print(self.Current_Soil_Moisture_Top_Layer,self.Residual_Soil_Moisture,Current_Soil_Water_Content_Top_Layer)
         # Update the class attributes with the calculated values
         self.Current_Soil_Water_Content_Top_Layer = Current_Soil_Water_Content_Top_Layer
         self.Total_Soil_Water_Content_Top_Layer = Total_Soil_Water_Content_Top_Layer
@@ -132,7 +132,7 @@ class Soil:
     def Calculate_Soil_Potential_Evaporation(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination,
                                              Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temperature,
                                              Min_Temperature, Vapour_Pressure_Deficit, Wind_Speed, 
-                                             soil_resistance_to_evaporation,Leaf_Blade_Angle, Total_Leaf_Area_Index,
+                                             soil_resistance_to_evaporation,Root_Depth,Leaf_Blade_Angle, Total_Leaf_Area_Index,
                                              Light_Extinction_Coefficient, Hourly_transpiration_Shaded, Hourly_transpiration_Sunlit):
             
             # Convert daily climate data to Hourly data
@@ -220,12 +220,12 @@ class Soil:
                 #print(soil_resistance_to_evaporation, turbulence_resistance_soil, water_boundary_layer_resistance_soil, boundary_layer_resistance_soil,)
                 
                 # Proportional transpiration
-                potential_transpiration_from_evaporative_soil_layer  = (shaded_transpiration + sunlit_transpiration) * self.Soil_Evaporative_Depth / self.Root_Depth
+                potential_transpiration_from_evaporative_soil_layer  = (shaded_transpiration + sunlit_transpiration) * self.Soil_Evaporative_Depth / Root_Depth
                 #print(potential_transpiration_from_evaporative_soil_layer)    
     
                # Daytime course of water supply
                 water_supply = self.Total_Soil_Water_Content_Top_Layer * (Hourly_sin_beam * Solar_Constant / 1367) / Daily_Sin_Beam_Exposure
-                proportional_water_supply = water_supply * self.Soil_Evaporative_Depth / self.Root_Depth
+                proportional_water_supply = water_supply * self.Soil_Evaporative_Depth / Root_Depth
                 
                 potential_evaporation_soil = max(0, potential_evaporation)
                 actual_evaporation_soil = min(potential_evaporation_soil, potential_evaporation_soil / (potential_transpiration_from_evaporative_soil_layer + potential_evaporation_soil) * proportional_water_supply)
@@ -356,33 +356,37 @@ class Soil:
 
         
         Runof = 0
-        
-        
-        Current_Soil_Water_Content_Top_Layer = self.Current_Soil_Water_Content_Top_Layer + Rainfall  - Drainage_From_Top_Layer - Runof - Actual_canopy_transpiration - self.Actual_Daily_Evaporation
+        #print("soil water")
+        #print( self.Current_Soil_Water_Content_Top_Layer )
+        Current_Soil_Water_Content_Top_Layer = self.Current_Soil_Water_Content_Top_Layer + Rainfall/10  - Drainage_From_Top_Layer - Runof - Actual_canopy_transpiration/10 - self.Actual_Daily_Evaporation/10
+        #print("soil water after dynamics")
+        #print(Current_Soil_Water_Content_Top_Layer)
         if self.Current_Soil_Water_Content_Top_Layer < 0:
             Current_Soil_Water_Content_Top_Layer = 0
          
 
 
-        self.Current_Soil_Water_Content_Whole_Depth = self.Current_Soil_Water_Content_Whole_Depth + Rainfall  - Drainage_Overall - Runof - Actual_canopy_transpiration - self.Actual_Daily_Evaporation
+        self.Current_Soil_Water_Content_Whole_Depth = self.Current_Soil_Water_Content_Whole_Depth + Rainfall/10  - Drainage_Overall - Runof - Actual_canopy_transpiration/10 - self.Actual_Daily_Evaporation/10
         if self.Current_Soil_Water_Content_Whole_Depth < 0:
             self.Current_Soil_Water_Content_Whole_Depth = 0
         self.Theoritical_Soil_Water_Content_Whole_Depth = Root_Depth * (self.Field_Capacity-self.Residual_Soil_Moisture)
         self.Total_Soil_Water_Content_Whole_Depth = self.Current_Soil_Water_Content_Whole_Depth / self.Theoritical_Soil_Water_Content_Top_Layer
         
-        
-        Current_Soil_Moisture_Top_Layer=(Current_Soil_Water_Content_Top_Layer/self.Top_Layer_Depth)-self.Residual_Soil_Moisture
+        #print(self.Current_Soil_Moisture_Top_Layer)
+        Current_Soil_Moisture_Top_Layer=(Current_Soil_Water_Content_Top_Layer/self.Top_Layer_Depth)+self.Residual_Soil_Moisture
+        #print(Current_Soil_Moisture_Top_Layer)
         Soil_Moisture_Fraction_Top_Layer=Current_Soil_Water_Content_Top_Layer/self.Theoritical_Soil_Water_Content_Top_Layer
         # Total_Soil_Water_Content_Top_Layer = (self.Residual_Soil_Moisture * self.Top_Layer_Depth) + Current_Soil_Water_Content_Top_Layer
         
         self.Current_Soil_Moisture_Top_Layer=Current_Soil_Moisture_Top_Layer
         self.Current_Soil_Water_Content_Top_Layer=Current_Soil_Water_Content_Top_Layer
         self.Soil_Moisture_Fraction_Top_Layer=Soil_Moisture_Fraction_Top_Layer
+       #print(self.Current_Soil_Moisture_Top_Layer)
        
         
         
         
-    def Calculate_Soil_N_Dynamics(self,Days_after_planting):
+    def Calculate_Soil_N_Dynamics(self,Root_Depth,Days_after_planting):
 
         soil_mass = self.Top_Layer_Depth * self.soil_bulk_density * (1 - self.fraction_soil_greater_than_2mm) * 1000  # g.m-2
         organic_N_mass = self.organic_N_percentage * 0.01 * soil_mass  # g.m-2
@@ -463,7 +467,7 @@ class Soil:
                         
             
         # Calculate the fraction of the top layer with roots
-        fraction_top_layer_with_roots = self.Root_Depth / self.Top_Layer_Depth
+        fraction_top_layer_with_roots = Root_Depth / self.Top_Layer_Depth
         if fraction_top_layer_with_roots > 1:
             fraction_top_layer_with_roots = 1
         
@@ -481,6 +485,7 @@ class Soil:
             available_soluble_N = 0
         
         self.available_soluble_N=available_soluble_N
+        #print(available_soluble_N)
         
 
     
@@ -495,6 +500,7 @@ class Soil:
 
         # Update class attributes with the calculated values
         self.Nitrogen_uptake = Nitrogen_uptake
+        print(Nitrogen_uptake)
 
 
 

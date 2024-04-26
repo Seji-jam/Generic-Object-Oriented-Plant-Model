@@ -153,7 +153,7 @@ class Leaf:
         # Integrating LAI considering nitrogen effect
         N_determined_LAI = math.log(1. + Leaf_Nitro_Ext_Coeff * max(0., Tot_Leaf_N) / self.Min_Specific_Leaf_N) / Leaf_Nitro_Ext_Coeff
         Leaf_Area_Index = min(N_determined_LAI, Carbon_determined_LAI)
-        print(N_determined_LAI, Carbon_determined_LAI)
+        #print(N_determined_LAI, Carbon_determined_LAI)
         # Updating Leaf area outputs
         self.Leaf_area_output = {
             'Dead_LAI': Dead_LAI,
