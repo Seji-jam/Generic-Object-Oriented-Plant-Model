@@ -1333,7 +1333,7 @@ class Leaf_Shaded(Leaf):
             Saturation_Vapor_Pressure, Intercellular_CO2_Concentration = Leaf.INTERNAL_CO2(Adjusted_Leaf_Temperature, Vapour_Pressure, Vapor_Pressure_Deficit_Response, self.Leaf_object.Ambient_CO2, self.Leaf_object.C3C4_Pathway)
             
             Absorbed_PAR_Leaf, Dark_Respiration = Leaf.PHOTOSYN(self.Leaf_object.C3C4_Pathway, Absorbed_PAR_Shaded, Adjusted_Leaf_Temperature, Intercellular_CO2_Concentration, Photosynthetic_Nitrogen_Shaded, self.Leaf_object.Activation_Energy_Jmax, self.Leaf_object.Vcmax_LeafN_Slope, self.Leaf_object.Jmax_LeafN_Slope, self.Leaf_object.Photosynthetic_Light_Response_Factor)
-            #print(Photosynthetic_Nitrogen_Shaded,)
+            print(Absorbed_PAR_Leaf, Dark_Respiration)
             # Actual photosynthesis under water stress condition
             Actual_Photosynthesis_Water_Stress = (1.6 * Stomatal_Resist_Water_Shaded + 1.3 * Boundary_Layer_Water_Resist_Shaded + Adjusted_Turbulence_Resistance) / (1.6 * Adjusted_Stomatal_Resistance_Water_Stress + 1.3 * Boundary_Layer_Water_Resist_Shaded + Adjusted_Turbulence_Resistance) * (Absorbed_PAR_Leaf - Dark_Respiration) + Dark_Respiration
 

@@ -43,7 +43,7 @@ Soil_object=Soil.Soil( Inputs.Residual_Soil_Moisture, Inputs.Saturated_Soil_Mois
              Inputs.nitrate_concentration_ppm,Inputs.ammonium_concentration_ppm,
              Inputs.Fertilizer_applications_count,Inputs.Fertilizer_applications_amount,
              Inputs.Fertilizer_applications_DAP,Inputs.Fraction_volatilization,
-           )
+             Inputs.Soil_Dynamic_Temperature_Factor)
 Leaf_object=Leaf.Leaf( Inputs.SLA_Const, Inputs.Min_Specific_Leaf_N, Inputs.Leaf_Blade_Angle, Inputs.Leaf_Width,  Inputs.C3C4_Pathway, Inputs.Ambient_CO2,
                       Inputs.Activation_Energy_JMAX, Inputs.VCMAX_LeafN_Slope, Inputs.JMAX_LeafN_Slope, Inputs.Photosynthetic_Light_Response_Factor )
 
@@ -188,6 +188,7 @@ for day_data in weather_data:
     
     Canopy_object.Calculate_Crop_Nitrogen_Demand(Leaf_object.specific_Leaf_n_output['Specific_Leaf_N'])
     
+    ###########################################################
     Canopy_object.Calculate_Nitrogen_Partitioning(Leaf_object.specific_Leaf_n_output['Specific_Leaf_N_Top_Increment'])
     
     Canopy_object.Calculate_Seed_Properties(Inputs.Crop_TypeDet, Canopy_object.EndSeedNum_DetPeriod,
