@@ -1,0 +1,58 @@
+{
+    "simulation_start_date":"1990-01-01",
+    "simulation_duration":200,
+    "Interval" : 1,
+
+    
+
+    "WeatherFilename" : "wth_input_drought.csv",
+    "output_filename" : "outputs_drought",
+
+    "Latitude" : 0.9074,
+    "Longitude" : 0.099,
+    "AngstromIntercept" : 0.18,
+    "AngstromSlope" : 0.55,
+
+    "ReferenceHeight" : 2.0,
+    "WindAttnCoefficient" : 2.0,
+    "EddyAttnCoefficient" : 2.0,
+    "StomataResA1" : 11.255,
+    "StomataResA2" : 0.005,
+    "MeanLeafWidth" : 0.08,
+
+    "PoreSizeDist" : 0.18,
+    "Porosity" : 0.42,
+    "WiltingPoint" : 0.07,
+    "SaturationPoint" : 0.39,
+    "WaterAmount01" : 0.20,
+    "WaterAmount02" : 0.20,
+    "Depth01" : 0.02,
+    "Depth02" : 0.03,
+    "MaxRootDepth" : 1.2,
+    "HydraulicSlope" : 14.5,
+    "SaturatedHydraulic" : 0.19,
+
+    "DevStage" : 0.0,
+    "BaseTemp01" : 0.0,
+    "BaseTemp02" : 0.0,
+    "LAI" : 0.012,
+    "Height" : 0.01,
+    "HeightMax" : 0.6,
+    "HeightIntercept" : 67.0,
+    "HeightSlope" : 0.007,
+    "RootsGrowRate" : 0.012,
+
+    "StemWgt" : 0.3,
+    "GreenLeavesWgt" : 0.5,
+    "DeadLeavesWgt" : 0.0,
+    "RootsWgt" : 0.8,
+    "StorageWgt" : 0.0,
+
+    "tabdvr01":"DevRate01Table.csv",
+    "tabdvr02":"DevRate02Table.csv",
+    "StemTable":"partst.csv",
+    "LeavesTable":"partlv.csv",
+    "RootsTable":"partrt.csv",
+    "StorageTable":"partso.csv",
+    "SLATable":"SLATable.csv"
+}

@@ -1,0 +1,15 @@
+variable,unit,Min,Max
+Development_Stage,---,0,2
+LAI,---,0,6
+Potential_Canopy_Photosynthesis,g CO2/m2/day,0,120
+Actual_Canopy_Photosynthesis,g CO2/m2/day,0,120
+potential_evap_daily,mm/day,0,5
+Actual_Daily_Evaporation,mm/day,0,5
+Potential_Canopy_Transpiration,mm/day,0,10
+Actual_Canopy_Transpiration,mm/day,0,10
+Plant_Height,m,0,1.5
+Root_Depth,cm,0,150
+Current_Soil_Moisture_Top_Layer,cm3/cm3,0.05,0.5
+Fraction_Carbon_to_Shoot,---,0.3,1
+Fraction_Carbon_to_Shoot_Nitrogen,---,0.5,1
+Harvest_Index,---,0,0.7
