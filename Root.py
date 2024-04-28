@@ -36,17 +36,17 @@ class Root:
         self.Root_nitrogen_loss_rate_senescence = Root_nitrogen_loss_rate_senescence
         self.nitrogen_determined_Root_Carbon = nitrogen_determined_Root_Carbon
         self.Root_carbon_loss_rate_senescence = Root_carbon_loss_rate_senescence
-        print( weight_roots_living,
-                Root_nitrogen_loss_rate_senescence,
-                nitrogen_determined_Root_Carbon,
-                 Root_carbon_loss_rate_senescence)
+        # print( weight_roots_living,
+        #         Root_nitrogen_loss_rate_senescence,
+        #         nitrogen_determined_Root_Carbon,
+        #          Root_carbon_loss_rate_senescence)
 
 
     def Calculate_Rooting_Depth(self, RootWeight_Rate, LiveRoot_Dry_Weight, DeadRoot_Dry_Weight):
         extinction_coefficient = -np.log(0.05) / self.max_root_depth
         root_depth_growth_rate = self.Switch_Function(self.root_depth_current - self.max_root_depth, min((self.max_root_depth - self.root_depth_current) / self.Model_TimeStep, (RootWeight_Rate + self.weight_roots_living) / (self.Critical_root_weight_density + extinction_coefficient * (LiveRoot_Dry_Weight + DeadRoot_Dry_Weight))), 0)
         self.root_depth_growth_rate = root_depth_growth_rate
-        print(root_depth_growth_rate)
+        # print(root_depth_growth_rate)
     def Update_State_Variables(self):
         self.carbon_dead_roots += self.Root_carbon_loss_rate_senescence 
         self.root_depth_current += self.root_depth_growth_rate 

@@ -89,7 +89,7 @@ class Soil:
         self.potential_evap_daily = 0
         self.potential_SoilRad_daily = 0
         self.Day_Air_Soil_temp_dif  = 0
-        self.Actual_evap_daily =0
+        self.Actual_Daily_Evaporation =0
         self.Hourly_boundary_layer_resistance_soil=[]
         self.Hourly_turbulence_resistance_soil=[]
         self.available_soluble_N=0
@@ -327,8 +327,8 @@ class Soil:
 
         
         # Print the rate of change in soil temperature for debugging or information purposes
-        print("rate_of_change_soil_temp")
-        print(self.rate_of_change_soil_temp)
+        # print("rate_of_change_soil_temp")
+        # print(self.rate_of_change_soil_temp)
         
         # Update class attributes with the new calculated values
         self.soil_steady_state_avg_temp = soil_steady_state_avg_temp
@@ -500,7 +500,7 @@ class Soil:
 
         # Update class attributes with the calculated values
         self.Nitrogen_uptake = Nitrogen_uptake
-        print(Nitrogen_uptake)
+        # print(Nitrogen_uptake)
 
 
 
