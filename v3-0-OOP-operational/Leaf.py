@@ -538,6 +538,7 @@ class Leaf_sunlit(Leaf):
         self.Leaf_object.Hourly_Sunlit_Leaf_Temp=Hourly_Sunlit_Leaf_Temp
         self.Leaf_object.Hourly_Air_Sunlit_Leaf_Temp_diff=Hourly_Air_Leaf_Temp_Diff             
         
+        
     def Calculate_Potential_Photosynthesis(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, 
                                            Solar_Radiation, Max_Temp, Min_Temp, Vapour_Pressure, Wind_Speed,C3C4_Pathway):
         # Use updated attributes
@@ -699,7 +700,7 @@ class Leaf_sunlit(Leaf):
             Boundary_Layer_Resistance_Water_Sunlit = 0.93 * Boundary_Layer_Resistance_Heat_Sunlit
 
                     
-            Sat_Vapor_Pressure_Ambient, Intercellular_CO2_Ambient = Leaf.INTERNAL_CO2(Hourly_Temp, Vapour_Pressure, Vapor_Pressure_Deficit_Response, self.Leaf_object.Ambient_CO2, self.Leaf_object.C3C4_Pathway)
+            Sat_Vapor_Pressure_Ambient, _ = Leaf.INTERNAL_CO2(Hourly_Temp, Vapour_Pressure, Vapor_Pressure_Deficit_Response, self.Leaf_object.Ambient_CO2, self.Leaf_object.C3C4_Pathway)
             Sat_Vapor_Pressure_Leaf, Intercellular_CO2_Leaf = Leaf.INTERNAL_CO2(Sunlit_Leaf_Temp, Vapour_Pressure, Vapor_Pressure_Deficit_Response, self.Leaf_object.Ambient_CO2, self.Leaf_object.C3C4_Pathway)
             
             Vapour_Pressure_Deficit = max(0, Sat_Vapor_Pressure_Ambient - Vapour_Pressure)
