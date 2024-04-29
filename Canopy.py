@@ -493,10 +493,10 @@ class Canopy:
         Nitrogen_Carbon_Ratio = self.Switch_Function(Specific_Leaf_N_Top_Increment - self.Min_Specific_Leaf_N, 0, min(self.MaxN_Uptake, self.Nitrogen_Demand_Activity_Driven)) / (self.Growth_Efficiency_Veg * (self.Actual_Canopy_Photosynthesis - self.Maintenance_Respiration - self.Dinitrogen_fixation_cost) * 12 / 44)
         Relative_Shoot_Activity  = 12.0 / 44.0 * self.Growth_Efficiency_Veg * (self.Actual_Canopy_Photosynthesis - self.Maintenance_Respiration - self.Dinitrogen_fixation_cost) / self.Carbon_Shoot
 
-        Fraction_Carbon_to_Shoot_Nitrogen = 1 / (1 + Nitrogen_Carbon_Ratio * self.delta / Relative_Shoot_Activity  * self.Carbon_Shoot / self.Root_Carbon * self.Nitrogen_Root / self.Nitrogen_Shoot)
+        Fraction_Nitrogen_to_Shoot = 1 / (1 + Nitrogen_Carbon_Ratio * self.delta / Relative_Shoot_Activity  * self.Carbon_Shoot / self.Root_Carbon * self.Nitrogen_Root / self.Nitrogen_Shoot)
         
         self.Relative_Shoot_Activity  = Relative_Shoot_Activity 
-        self.Fraction_Carbon_to_Shoot_Nitrogen = Fraction_Carbon_to_Shoot_Nitrogen
+        self.Fraction_Nitrogen_to_Shoot = Fraction_Nitrogen_to_Shoot
         self.Nitrogen_Carbon_Ratio = Nitrogen_Carbon_Ratio
         # print(Relative_Shoot_Activity)
         # print(Nitrogen_Carbon_Ratio)
@@ -692,7 +692,7 @@ class Canopy:
     
     def Calculate_Nitrogen_Accumulation_Rate(self, NitrogenUptake, Root_nitrogen_loss_rate_senescence,Standard_SeedNitrogen_Conc):
         # Amount of N partitioned to shoot
-        Nitrogen_Shoot_New = self.Fraction_Carbon_to_Shoot_Nitrogen * NitrogenUptake
+        Nitrogen_Shoot_New = self.Fraction_Nitrogen_to_Shoot * NitrogenUptake
 
         # Leaf N or root N available for remobilization
         Nitrogen_Leaf_Available = self.Switch_Function(self.MinLeafN_Conc - self.Leaf_Nitrogen_Conc, self.Nitrogen_Leaf - self.LiveLeaf_Dry_Weight * self.MinLeafN_Conc, 0.) / self.Model_TimeStep

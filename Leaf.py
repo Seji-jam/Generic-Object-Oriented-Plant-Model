@@ -803,12 +803,9 @@ class Leaf_sunlit(Leaf):
                 Actual_Canopy_Transpiration = Total_Potential_Canopy_Transpiration
             
             # This ensures that the plant's transpiration rates are adjusted in real-time based on soil water availability, reflecting a realistic physiological response to varying water stress conditions. The model thus accounts for the dynamic interplay between environmental water availability a
-
-            # Calculating the combined potential transpiration for the canopy
-            Combined_Potential_Transpiration = Transpiration_Sunlit + Transpiration_Shaded
             
             # Adjusting actual transpiration for sunlit leaves based on canopy water availability
-            Actual_Transpiration_Sunlit = Transpiration_Sunlit * (Actual_Canopy_Transpiration / Combined_Potential_Transpiration)
+            Actual_Transpiration_Sunlit = Transpiration_Sunlit * (Actual_Canopy_Transpiration / Total_Potential_Canopy_Transpiration)
             
             # Solar radiation partitioning into PAR and determining the diffuse light fraction
             PAR = 0.5 * Daily_Sin_Beam_Exposure
