@@ -9,11 +9,22 @@ import Leaf
 import Canopy
 import AtmoWeather
 from Input_Setup import Import_Data
+from Output_Manager import OutputManager
+
+
+
+output_manager = OutputManager()
+output_manager.write_header(OutputManager.format_header())
+
+
+
+
+
 
 
 User_Inputs_file = r'User_Inputs.xlsx'
 Default_Inputs_file = r'Default_Inputs.xlsx'
-Weather_File='weatherfile.xlsx'
+Weather_File='Synthetic_Weather_Data.xlsx'
 
 # Load crop data from both files
 Inputs = Import_Data(User_Inputs_file)
@@ -43,7 +54,7 @@ Soil_object=Soil.Soil( Inputs.Residual_Soil_Moisture, Inputs.Saturated_Soil_Mois
              Inputs.nitrate_concentration_ppm,Inputs.ammonium_concentration_ppm,
              Inputs.Fertilizer_applications_count,Inputs.Fertilizer_applications_amount,
              Inputs.Fertilizer_applications_DAP,Inputs.Fraction_volatilization,
-           )
+             Inputs.Soil_Dynamic_Temperature_Factor)
 Leaf_object=Leaf.Leaf( Inputs.SLA_Const, Inputs.Min_Specific_Leaf_N, Inputs.Leaf_Blade_Angle, Inputs.Leaf_Width,  Inputs.C3C4_Pathway, Inputs.Ambient_CO2,
                       Inputs.Activation_Energy_JMAX, Inputs.VCMAX_LeafN_Slope, Inputs.JMAX_LeafN_Slope, Inputs.Photosynthetic_Light_Response_Factor )
 
@@ -51,6 +62,7 @@ Leaf_object=Leaf.Leaf( Inputs.SLA_Const, Inputs.Min_Specific_Leaf_N, Inputs.Leaf
 # Iterate over each timestep's weather data
 for day_data in weather_data:
     # Extract the necessary weather data for the current timestep
+    Year=day_data['Year'].astype(int)
     Solar_Constant=day_data['Solar_Constant']
     Sin_Solar_Declination = day_data['Sin_Solar_Declination']
     Cos_Solar_Declination = day_data['Cos_Solar_Declination']
@@ -62,7 +74,7 @@ for day_data in weather_data:
     Vapour_Pressure = day_data['Vapour_Pressure']
     Wind_Speed = day_data['Wind_Speed']
     rain = day_data['Rain']
-    doy=day_data['Doy']
+    doy=day_data['Doy'].astype(int)
     Days_after_planting=doy-Inputs.planting_doy+1
     
 
@@ -104,7 +116,7 @@ for day_data in weather_data:
                             Leaf_object.Hourly_Sunlit_Leaf_Temp, Leaf_object.Hourly_Shaded_Leaf_Temp)
     
     Canopy_object.Update_Canopy_Photosyn("P",Leaf_object.Hourly_Photosynthesis_Sunlit,Leaf_object.Hourly_Photosynthesis_Shaded,Day_Length)
-   
+
     
     Canopy_object.Update_Canopy_Transpiration("P",Leaf_object.Hourly_Transpiration_Sunlit,Leaf_object.Hourly_Transpiration_Shaded,Day_Length)
     
@@ -118,8 +130,8 @@ for day_data in weather_data:
     Soil_object.Calculate_Soil_Water_Content()
     
     Soil_object.Calculate_Soil_Potential_Evaporation(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, tmax, tmin, Vapour_Pressure,Wind_Speed,
-                                                     Soil_object.soil_resistance_to_evaporation,Leaf_object.Leaf_Blade_Angle,
-                                                     Leaf_object.Leaf_area_output['Total_LAI'],Leaf_object.Leaf_area_output['Wind_Ext_Coeff'],
+                                                     Soil_object.soil_resistance_to_evaporation, Root_object.root_depth_current,
+                                                     Leaf_object.Leaf_Blade_Angle, Leaf_object.Leaf_area_output['Total_LAI'],Leaf_object.Leaf_area_output['Wind_Ext_Coeff'],
                             Leaf_object.Hourly_Transpiration_Shaded,Leaf_object.Hourly_Transpiration_Sunlit)
 
 
@@ -131,11 +143,11 @@ for day_data in weather_data:
 
 
     Leaf_sunlit_object.Update_LeafTemp_Photosynthesis_if_WaterStress(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, tmax, tmin, Vapour_Pressure, Wind_Speed,Canopy_object.Plant_Height,
-                           Soil_object.Current_Soil_Water_Content_Top_Layer,Soil_object.Soil_Evaporative_Depth,Soil_object.Root_Depth, 
+                           Soil_object.Current_Soil_Water_Content_Top_Layer,Soil_object.Soil_Evaporative_Depth, Root_object.root_depth_current, 
                            Leaf_object.Hourly_Sunlit_Leaf_Temp, Leaf_object.Hourly_Shaded_Leaf_Temp,
                            Soil_object.Hourly_Soil_Evap,Leaf_object.C3C4_Pathway)
     Leaf_shaded_object.Update_LeafTemp_Photosynthesis_if_WaterStress(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, tmax, tmin, Vapour_Pressure, Wind_Speed,Canopy_object.Plant_Height,
-                           Soil_object.Current_Soil_Water_Content_Top_Layer,Soil_object.Soil_Evaporative_Depth,Soil_object.Root_Depth, 
+                           Soil_object.Current_Soil_Water_Content_Top_Layer,Soil_object.Soil_Evaporative_Depth, Root_object.root_depth_current, 
                            Leaf_object.Hourly_Sunlit_Leaf_Temp, Leaf_object.Hourly_Shaded_Leaf_Temp,
                            Soil_object.Hourly_Soil_Evap,Leaf_object.C3C4_Pathway)
     
@@ -144,12 +156,13 @@ for day_data in weather_data:
                             Leaf_object.Hourly_Actual_Sunlit_Leaf_Temp, Leaf_object.Hourly_Actual_Shaded_Leaf_Temp)
     Canopy_object.Update_Canopy_Photosyn("A",Leaf_object.Hourly_Actual_Photosynthesis_Sunlit,Leaf_object.Hourly_Actual_Photosynthesis_Shaded,Day_Length)
     Canopy_object.Update_Canopy_Transpiration("A",Leaf_object.Hourly_Actual_Transpiration_Sunlit,Leaf_object.Hourly_Actual_Transpiration_Shaded,Day_Length)
-    
+    Canopy_object.Update_Canopy_Photosyn_DELTA(Leaf_object.Hourly_Actual_Photosynthesis_Sunlit_DELTA,Leaf_object.Hourly_Actual_Photosynthesis_Shaded_DELTA,Day_Length)
+
     
 
 
     Soil_object.Update_Evaporation_if_WaterStress(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure,Soil_object.Current_Soil_Water_Content_Top_Layer,
-                                                  Soil_object.Soil_Evaporative_Depth,Soil_object.Root_Depth,                                                  
+                                                  Soil_object.Soil_Evaporative_Depth, Root_object.root_depth_current,                                                  
                                                        Leaf_object.Hourly_Transpiration_Sunlit, Leaf_object.Hourly_Transpiration_Shaded,
                                                        Soil_object.Hourly_Soil_Evap,)
     
@@ -188,6 +201,7 @@ for day_data in weather_data:
     
     Canopy_object.Calculate_Crop_Nitrogen_Demand(Leaf_object.specific_Leaf_n_output['Specific_Leaf_N'])
     
+    ###########################################################
     Canopy_object.Calculate_Nitrogen_Partitioning(Leaf_object.specific_Leaf_n_output['Specific_Leaf_N_Top_Increment'])
     
     Canopy_object.Calculate_Seed_Properties(Inputs.Crop_TypeDet, Canopy_object.EndSeedNum_DetPeriod,
@@ -230,7 +244,7 @@ for day_data in weather_data:
     # =============================================================================
     Soil_object.Soil_Water_Components(rain, Root_object.root_depth_current, Canopy_object.Actual_Canopy_Transpiration)
 
-    Soil_object.Calculate_Soil_N_Dynamics(Days_after_planting)
+    Soil_object.Calculate_Soil_N_Dynamics(Root_object.root_depth_current,Days_after_planting)
     Soil_object.Calculate_Nitrogen_Uptake(Canopy_object.Nitrogen_Demand)
     
     
@@ -244,8 +258,7 @@ for day_data in weather_data:
     
     Canopy_object.Calculate_Nitrogen_Accumulation_Rate(Soil_object.Nitrogen_uptake,Root_object.Root_nitrogen_loss_rate_senescence,Inputs.Standard_SeedNitrogen_Conc)
     
-    ########################
-    Canopy_object.Calculate_Leaf_Area_ChangeRate(Canopy_object.Carbon_determined_LAI,Leaf_object.specific_Leaf_n_output['Specific_Leaf_N_Bottom_Exponential_with_Depth'],Leaf_object.Leaf_area_output['Leaf_Nitro_Ext_Coeff'])
+    Canopy_object.Calculate_Leaf_Area_ChangeRate(Canopy_object.Carbon_determined_LAI,Leaf_object.specific_Leaf_n_output['Specific_Leaf_N_Bottom'],Leaf_object.Leaf_area_output['Leaf_Nitro_Ext_Coeff'])
 
     Root_object.Calculate_Rooting_Depth(Canopy_object.RootWeight_Rate, Canopy_object.LiveRoot_Dry_Weight, Canopy_object.DeadRoot_Dry_Weight)
 
@@ -253,12 +266,6 @@ for day_data in weather_data:
     
     Canopy_object.Calculate_Carbon_Nitrogen_Returns(Root_object.Root_carbon_loss_rate_senescence, Root_object.Root_nitrogen_loss_rate_senescence,Soil_object.average_soil_temperature)
         
-
-    # =============================================================================
-    # updating Soil water balance, carbon, and Nitrogen
-    # =============================================================================
-    
-    
     
     # =============================================================================
     # updating state variables 
@@ -268,5 +275,9 @@ for day_data in weather_data:
     Root_object.Update_State_Variables()
     Soil_object.Update_State_Variables()
 
-        
     
+    # =============================================================================
+    # writing outputs
+    # =============================================================================
+    formatted_data = OutputManager.format_data(day_data, Canopy_object, Leaf_object, Root_object, Soil_object)
+    output_manager.append_data(formatted_data)
