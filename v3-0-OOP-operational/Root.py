@@ -3,18 +3,17 @@ import numpy as np
 
 
 class Root:
-    def __init__(self,  Critical_root_weight_density, max_root_depth, Model_TimeStep, Soil_Depth_1):
+    def __init__(self,  Critical_root_weight_density, max_root_depth, Model_TimeStep, Soil_Evaporative_Depth):
         self.Critical_root_weight_density = Critical_root_weight_density
         self.max_root_depth = max_root_depth
         self.Model_TimeStep = Model_TimeStep
-        self.root_depth_initial = max(2.0, Soil_Depth_1)
-        self.root_depth_current = self.root_depth_initial
         self.nitrogen_determined_Root_Carbon = 0
         self.Root_carbon_loss_rate_senescence = 0
         self.weight_roots_living = 0
         self.Root_nitrogen_loss_rate_senescence = 0
         self.carbon_dead_roots = 0
-
+        root_depth_initial = max(2.0, Soil_Evaporative_Depth)
+        self.root_depth_current = root_depth_initial
 
         
     def Switch_Function(self,x, y1, y2):
@@ -37,13 +36,17 @@ class Root:
         self.Root_nitrogen_loss_rate_senescence = Root_nitrogen_loss_rate_senescence
         self.nitrogen_determined_Root_Carbon = nitrogen_determined_Root_Carbon
         self.Root_carbon_loss_rate_senescence = Root_carbon_loss_rate_senescence
+        # print( weight_roots_living,
+        #         Root_nitrogen_loss_rate_senescence,
+        #         nitrogen_determined_Root_Carbon,
+        #          Root_carbon_loss_rate_senescence)
 
 
     def Calculate_Rooting_Depth(self, RootWeight_Rate, LiveRoot_Dry_Weight, DeadRoot_Dry_Weight):
         extinction_coefficient = -np.log(0.05) / self.max_root_depth
         root_depth_growth_rate = self.Switch_Function(self.root_depth_current - self.max_root_depth, min((self.max_root_depth - self.root_depth_current) / self.Model_TimeStep, (RootWeight_Rate + self.weight_roots_living) / (self.Critical_root_weight_density + extinction_coefficient * (LiveRoot_Dry_Weight + DeadRoot_Dry_Weight))), 0)
         self.root_depth_growth_rate = root_depth_growth_rate
-
+        # print(root_depth_growth_rate)
     def Update_State_Variables(self):
         self.carbon_dead_roots += self.Root_carbon_loss_rate_senescence 
         self.root_depth_current += self.root_depth_growth_rate 
