@@ -146,11 +146,11 @@ class Leaf:
         # Nitrogen and light extinction coefficients
         Light_Ext_Coeff = Leaf.KDF_Coeff(Total_LAI, self.Leaf_Blade_Angle * np.pi / 180., 0.2)
         Nitro_Ext_Coeff = Light_Ext_Coeff * (Tot_Leaf_N - self.Min_Specific_Leaf_N * Total_LAI)
-        Nitro_Base_K = self.Min_Specific_Leaf_N * (1.0 - np.exp(-Light_Ext_Coeff * Total_LAI))
+        intermediate_var = self.Min_Specific_Leaf_N * (1.0 - np.exp(-Light_Ext_Coeff * Total_LAI))
         
         # Assuming wind extinction coefficient is similar to light for simplicity
         Wind_Ext_Coeff = Light_Ext_Coeff  
-        Leaf_Nitro_Ext_Coeff = 1.0 / Total_LAI * math.log((Nitro_Ext_Coeff + Nitro_Base_K) / (Nitro_Ext_Coeff * math.exp(-Light_Ext_Coeff * Total_LAI) + Nitro_Base_K))
+        Leaf_Nitro_Ext_Coeff = 1.0 / Total_LAI * math.log((Nitro_Ext_Coeff + intermediate_var) / (Nitro_Ext_Coeff * math.exp(-Light_Ext_Coeff * Total_LAI) + intermediate_var))
 
         # Integrating LAI considering nitrogen effect
         N_determined_LAI = math.log(1. + Leaf_Nitro_Ext_Coeff * max(0., Tot_Leaf_N) / self.Min_Specific_Leaf_N) / Leaf_Nitro_Ext_Coeff
@@ -162,7 +162,6 @@ class Leaf:
             'Total_LAI': Total_LAI,
             'Light_Ext_Coeff': Light_Ext_Coeff,
             'Nitro_Ext_Coeff': Nitro_Ext_Coeff,
-            'Nitro_Base_K': Nitro_Base_K,
             'Wind_Ext_Coeff': Wind_Ext_Coeff,
             'Leaf_Nitro_Ext_Coeff': Leaf_Nitro_Ext_Coeff,
             'Leaf_Area_Index': Leaf_Area_Index,
