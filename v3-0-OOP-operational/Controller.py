@@ -1,5 +1,5 @@
 import os
-os.chdir(r'D:\Diane_lab\simple_model\generic_crop_model_project\Git_OOD\Generic-Object-Oriented-Plant-Model')
+os.chdir(r'D:\Diane_lab\simple_model\generic_crop_model_project\Git_OOD\Generic-Object-Oriented-Plant-Model\v3-0-OOP-operational')
 
 import numpy as np
 import pandas as pd

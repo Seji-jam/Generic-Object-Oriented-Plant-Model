@@ -20,7 +20,11 @@ class OutputManager:
     def format_header():
         header="Year,doy,Development_Stage,LAI,Cumulative_Thermal_Unit,\
 LiveRoot_Dry_Weight,Shoot_Dry_Weight,weight_roots_living,\
-Leaf_Carbon,Stem_Carbon,Seed_Carbon,Root_Carbon,\
+Fraction_Leaf_Carbon,Leaf_Carbon,\
+Fraction_Seed_Carbon,Seed_Carbon,\
+Fraction_Stem_Carbon ,Stem_Carbon,\
+Total_CarbonDemand_StemGrowth,DailyCarbon_Supply_Stem,Carbon_Flow_to_Stem\
+Root_Carbon,\
 Nitrogen_Leaf,Nitrogen_Stem,Nitrogen_Seed,Nitrogen_Root,\
 Nitrogen_uptake,\
 Respiration_Uptakes,Maintenance_Respiration,Cumulative_Respiration,\
@@ -38,7 +42,11 @@ Current_Soil_Moisture_Top_Layer"
         return f"{day_data['Year']},{day_data['Doy']},{float(Canopy_object.Development_Stage):.2f},{float(Leaf_object.Leaf_area_output['Leaf_Area_Index']):.3f},\
 {float(Canopy_object.Cumulative_Thermal_Unit):.2f},\
 {float(Canopy_object.LiveRoot_Dry_Weight):.3f},{float(Canopy_object.Shoot_Dry_Weight):.3f},{float(Root_object.weight_roots_living):.3f},\
-{float(Canopy_object.Leaf_Carbon):.3f},{float(Canopy_object.Stem_Carbon):.3f},{float(Canopy_object.Seed_Carbon):.3f},{float(Canopy_object.Root_Carbon):.3f},\
+{float(Canopy_object.Fraction_Leaf_Carbon):.3f},{float(Canopy_object.Leaf_Carbon):.3f},\
+{float(Canopy_object.Fraction_Seed_Carbon):.3f},{float(Canopy_object.Seed_Carbon):.3f},\
+{float(Canopy_object.Fraction_Stem_Carbon):.3f},{float(Canopy_object.Stem_Carbon):.3f},\
+{float(Canopy_object.Total_CarbonDemand_StemGrowth):.3f},{float(Canopy_object.DailyCarbon_Supply_Stem):.3f},{float(Canopy_object.Carbon_Flow_to_Stem):.3f},\
+{float(Canopy_object.Root_Carbon):.3f},\
 {float(Canopy_object.Nitrogen_Leaf):.3f},{float(Canopy_object.Nitrogen_Stem):.3f},{float(Canopy_object.Nitrogen_Seed):.3f},{float(Canopy_object.Nitrogen_Root):.3f},\
 {float(Soil_object.Nitrogen_uptake):.3f},\
 {float(Canopy_object.Respiration_Uptakes):.3f},{float(Canopy_object.Maintenance_Respiration):.3f},{float(Canopy_object.Cumulative_Respiration):.3f},\

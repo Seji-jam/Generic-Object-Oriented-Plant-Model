@@ -155,7 +155,7 @@ class Leaf:
         # Integrating LAI considering nitrogen effect
         N_determined_LAI = math.log(1. + Leaf_Nitro_Ext_Coeff * max(0., Tot_Leaf_N) / self.Min_Specific_Leaf_N) / Leaf_Nitro_Ext_Coeff
         Leaf_Area_Index = min(N_determined_LAI, Carbon_determined_LAI)
-        #print(N_determined_LAI, Carbon_determined_LAI)
+        # print(N_determined_LAI, Carbon_determined_LAI)
         # Updating Leaf area outputs
         self.Leaf_area_output = {
             'Dead_LAI': Dead_LAI,
@@ -172,11 +172,11 @@ class Leaf:
         # Extracting final LAI and Leaf nitrogen extinction coefficient
         Leaf_Area_Index = self.Leaf_area_output['Leaf_Area_Index']
         Leaf_Nitro_Ext_Coeff = self.Leaf_area_output['Leaf_Nitro_Ext_Coeff']
-        
+
         # Calculating specific Leaf nitrogen
         Specific_Leaf_N = Tot_Leaf_N / Leaf_Area_Index  # Average specific Leaf nitrogen
         Specific_Leaf_N_Top = Tot_Leaf_N * Leaf_Nitro_Ext_Coeff / (1. - np.exp(-Leaf_Nitro_Ext_Coeff * Leaf_Area_Index))  # For top leaves
-        
+        # print(Specific_Leaf_N_Top)
         
         # Specific_Leaf_N_Bottom_Exponential_with_Depth = Tot_Leaf_N * Leaf_Nitro_Ext_Coeff * np.exp(-Leaf_Nitro_Ext_Coeff * Leaf_Area_Index) / (1. - np.exp(-Leaf_Nitro_Ext_Coeff * Leaf_Area_Index))  # Exponential nitrogen profile
         Specific_Leaf_N_Bottom = Tot_Leaf_N * Leaf_Nitro_Ext_Coeff * np.exp(-Leaf_Nitro_Ext_Coeff * Leaf_Area_Index) / (1. - np.exp(-Leaf_Nitro_Ext_Coeff * Leaf_Area_Index))  # Exponential nitrogen profile
@@ -395,18 +395,6 @@ class Leaf:
 
 
 
-    def Limit_Function(xl, xh, x):
-        if xl <= x <= xh:
-            out = x
-        elif x > xh:
-            out = xh
-        else:
-            out = xl
-        return out
-
-
-
-
 
 class Leaf_sunlit(Leaf):
     def __init__(self, Leaf_object):
@@ -482,15 +470,15 @@ class Leaf_sunlit(Leaf):
                         
             # Calculating photosynthetic nitrogen for sunlit canopy parts
             Specific_Leaf_N_Sunlit = Specific_Leaf_N_Top * (1. - np.exp(-(Leaf_Nitro_Ext_Coeff + Direct_Beam_Extinction_Coefficient) * Leaf_Area_Index)) / (Leaf_Nitro_Ext_Coeff + Direct_Beam_Extinction_Coefficient) - self.Leaf_object.Min_Specific_Leaf_N * (1. - np.exp(-Direct_Beam_Extinction_Coefficient * Leaf_Area_Index)) / Direct_Beam_Extinction_Coefficient
-            #print(Specific_Leaf_N_Sunlit)
+            # print(Specific_Leaf_N_Sunlit)
 
             # Absorption of PAR and NIR by sunlit leaves
             Absorbed_PAR_Sunlit, _ = Leaf.LIGHT_ABSORB(Scattering_Coefficient_PAR, Direct_Beam_Extinction_Coefficient, Scattered_Beam_Extinction_Coefficient_PAR,
                                                        Diffuse_Extinction_Coefficient_PAR, Canopy_Beam_Reflection_Coefficient_PAR, Canopy_Diffuse_Reflection_Coefficient_PAR,
                                                        Direct_PAR, Diffuse_PAR, Leaf_Area_Index)
             Absorbed_NIR_Sunlit, _ = Leaf.LIGHT_ABSORB(Scattering_Coefficient_NIR, Direct_Beam_Extinction_Coefficient, Scattered_Beam_Extinction_Coefficient_NIR, Diffuse_Extinction_Coefficient_NIR, Canopy_Beam_Reflection_Coefficient_NIR, Canopy_Diffuse_Reflection_Coefficient_NIR, Direct_NIR, Diffuse_NIR, Leaf_Area_Index)
-            #print("Absorbed_PAR_Sunlit")
-            #print(Diffuse_PAR, Leaf_Area_Index)
+            # print("Absorbed_PAR_Sunlit")
+            # print(Absorbed_PAR_Sunlit)
             
             
             # Calculating potential photosynthesis and dark respiration for sunlit leaves
@@ -499,11 +487,11 @@ class Leaf_sunlit(Leaf):
 
             # Total absorbed radiation (PAR + NIR) by sunlit leaves
             Total_Absorbed_Radiation_Sunlit = Absorbed_PAR_Sunlit + Absorbed_NIR_Sunlit
-            # print(Total_Absorbed_Radiation_Sunlit)
 
             # Calculating the fraction of sunlit and shaded canopy components
             Sunlit_Fraction = 1. / Direct_Beam_Extinction_Coefficient / Leaf_Area_Index * (1. - np.exp(-Direct_Beam_Extinction_Coefficient * Leaf_Area_Index))
-            
+            # print(Sunlit_Fraction)
+
             # Boundary layer resistance for heat and water vapor for sunlit leaves
             Boundary_Layer_Conductance_Heat=(0.01 * np.sqrt(Wind_Speed / self.Leaf_object.Leaf_Width))
             Boundary_Layer_Conductance_Heat_Sunlit = Boundary_Layer_Conductance_Heat*(1 - np.exp(-(0.5 * Wind_Ext_Coeff + Direct_Beam_Extinction_Coefficient) * Leaf_Area_Index)) / (0.5 * Wind_Ext_Coeff + Direct_Beam_Extinction_Coefficient)
@@ -511,29 +499,34 @@ class Leaf_sunlit(Leaf):
             Boundary_Layer_Resistance_Water_Sunlit = 0.93 * Boundary_Layer_Resistance_Heat_Sunlit
 
             
-            # print(Boundary_Layer_Resistance_Heat_Sunlit,Boundary_Layer_Resistance_Water_Sunlit)
+            # print(Boundary_Layer_Resistance_Heat_Sunlit)
             # Calculating potential CO2 conductance for sunlit leaves
             Potential_CO2_Conductance_Sunlit = (Potential_Photosynthesis_Sunlit - Dark_Respiration_Sunlit) * (273.15 + Hourly_Temp) / 0.53717 / (self.Leaf_object.Ambient_CO2 - Intercellular_CO2)
             # print(Potential_CO2_Conductance_Sunlit)
             # Calculating Turbulence Resistance for the canopy
             Turbulence_Resistance = 0.74 * (np.log((2. - 0.7 * Plant_Height) / (0.1 * Plant_Height))) ** 2 / (0.4 ** 2 * Wind_Speed)
-            Stomatal_Resistance_Sunlit = max(1E-30, 1 / Potential_CO2_Conductance_Sunlit - Boundary_Layer_Resistance_Water_Sunlit * 1.3 - Turbulence_Resistance) / 1.6
-            
+            Turbulence_Resistance_Sunlit=Turbulence_Resistance * Sunlit_Fraction
+            Stomatal_Resistance_Sunlit = max(1E-30, 1 / Potential_CO2_Conductance_Sunlit - Boundary_Layer_Resistance_Water_Sunlit * 1.3 - Turbulence_Resistance_Sunlit) / 1.6
+            # print(Stomatal_Resistance_Sunlit)
+
             # Applying Penman-Monteith equation to calculate transpiration and net radiation absorbed
-            Transpiration_Sunlit, Net_Radiation_Absorbed_Sunlit = Leaf.Penman_Monteith(Stomatal_Resistance_Sunlit, Turbulence_Resistance,
+            Transpiration_Sunlit, Net_Radiation_Absorbed_Sunlit = Leaf.Penman_Monteith(Stomatal_Resistance_Sunlit,Turbulence_Resistance_Sunlit ,
                                                                                        Boundary_Layer_Resistance_Water_Sunlit, Boundary_Layer_Resistance_Heat_Sunlit,
                                                                                        Total_Absorbed_Radiation_Sunlit, Atmospheric_Transmissivity,
                                                                                        Sunlit_Fraction, Hourly_Temp, Vapour_Pressure, 
                                                                                        Slope_SVP, Vapour_Pressure_Deficit)
-            
+            # print(Net_Radiation_Absorbed_Sunlit)
+
             # Calculating Leaf temperature difference
-            Air_Leaf_Temp_Diff_Sunlit = (Net_Radiation_Absorbed_Sunlit - Latent_Heat_Vaporization * Transpiration_Sunlit) * (Boundary_Layer_Resistance_Heat_Sunlit + (Turbulence_Resistance * Sunlit_Fraction)) / Volumetric_Heat_Capacity_Air
+            Air_Leaf_Temp_Diff_Sunlit = (Net_Radiation_Absorbed_Sunlit - Latent_Heat_Vaporization * Transpiration_Sunlit) * (Boundary_Layer_Resistance_Heat_Sunlit + Turbulence_Resistance_Sunlit) / Volumetric_Heat_Capacity_Air
+            Air_Leaf_Temp_Diff_Sunlit=max(-25, min(Air_Leaf_Temp_Diff_Sunlit, 25)) 
             # print("leaf temp")
             # print(Air_Leaf_Temp_Diff_Sunlit)
-            # print(Hourly_Temp)
             # Appending calculated temperature difference and adjusted Leaf temperature to lists
             Hourly_Air_Leaf_Temp_Diff.append(Air_Leaf_Temp_Diff_Sunlit)
             Adjusted_Leaf_Temp_Sunlit = Hourly_Temp + Air_Leaf_Temp_Diff_Sunlit
+            # print(Boundary_Layer_Resistance_Heat_Sunlit + Turbulence_Resistance_Sunlit)
+
             Hourly_Sunlit_Leaf_Temp.append(Adjusted_Leaf_Temp_Sunlit)
         self.Leaf_object.Hourly_Sunlit_Leaf_Temp=Hourly_Sunlit_Leaf_Temp
         self.Leaf_object.Hourly_Air_Sunlit_Leaf_Temp_diff=Hourly_Air_Leaf_Temp_Diff             
@@ -596,8 +589,8 @@ class Leaf_sunlit(Leaf):
             
             # Calculating potential photosynthesis and dark respiration for sunlit leaves
             Potential_Photosynthesis_Sunlit, Dark_Respiration_Sunlit = Leaf.PHOTOSYN(self.Leaf_object.C3C4_Pathway, Absorbed_PAR_Sunlit, Sunlit_Leaf_Temp, Intercellular_CO2_Concentration, Photosynthetic_Nitrogen_Sunlit, self.Leaf_object.Activation_Energy_Jmax, self.Leaf_object.Vcmax_LeafN_Slope, self.Leaf_object.Jmax_LeafN_Slope, self.Leaf_object.Photosynthetic_Light_Response_Factor)
-            # print(Potential_Photosynthesis_Sunlit)
-
+            print(Potential_Photosynthesis_Sunlit)
+            # print( Absorbed_PAR_Sunlit, Sunlit_Leaf_Temp, Intercellular_CO2_Concentration, Photosynthetic_Nitrogen_Sunlit,)
                    
             # Appending the calculated photosynthesis and respiration rates to their respective hourly lists
             Hourly_Photosynthesis.append(Potential_Photosynthesis_Sunlit)
@@ -712,13 +705,13 @@ class Leaf_sunlit(Leaf):
             Potential_CO2_Conductance_Sunlit = (Photosynthesis_Sunlit - Dark_Respiration_Sunlit) * (273.15 + Sunlit_Leaf_Temp) / 0.53717 / (self.Leaf_object.Ambient_CO2 - Intercellular_CO2_Leaf)
             
             # Turbulence resistance calculation based on canopy structure and wind speed
-            Turbulence_Resistance_Canopy = 0.74 * (np.log((2. - 0.7 * Plant_Height) / (0.1 * Plant_Height))) ** 2 / (0.4 ** 2 * Wind_Speed)
-            
+            Turbulence_Resistance = 0.74 * (np.log((2. - 0.7 * Plant_Height) / (0.1 * Plant_Height))) ** 2 / (0.4 ** 2 * Wind_Speed)
+            Turbulence_Resistance_Sunlit=Turbulence_Resistance * Sunlit_Fraction
             # Calculating sunlit Leaf-specific stomatal resistance to water vapor
-            Stomatal_Resistance_Water_Sunlit = max(1E-30, 1 / Potential_CO2_Conductance_Sunlit - Boundary_Layer_Resistance_Water_Sunlit * 1.3 - Turbulence_Resistance_Canopy * Sunlit_Fraction) / 1.6
+            Stomatal_Resistance_Water_Sunlit = max(1E-30, 1 / Potential_CO2_Conductance_Sunlit - Boundary_Layer_Resistance_Water_Sunlit * 1.3 - Turbulence_Resistance_Sunlit) / 1.6
             
             # Applying the Penman-Monteith equation for potential transpiration estimation
-            Potential_Transpiration_Sunlit, Absorbed_Radiation_Sunlit = Leaf.Penman_Monteith(Stomatal_Resistance_Water_Sunlit, Turbulence_Resistance_Canopy * Sunlit_Fraction, Boundary_Layer_Resistance_Water_Sunlit, Boundary_Layer_Resistance_Heat_Sunlit, Total_Absorbed_Radiation_Sunlit, Atmospheric_Transmissivity, Sunlit_Fraction, Sunlit_Leaf_Temp, Vapour_Pressure, Slope_VPD, Vapour_Pressure_Deficit)
+            Potential_Transpiration_Sunlit, Absorbed_Radiation_Sunlit = Leaf.Penman_Monteith(Stomatal_Resistance_Water_Sunlit, Turbulence_Resistance_Sunlit, Boundary_Layer_Resistance_Water_Sunlit, Boundary_Layer_Resistance_Heat_Sunlit, Total_Absorbed_Radiation_Sunlit, Atmospheric_Transmissivity, Sunlit_Fraction, Sunlit_Leaf_Temp, Vapour_Pressure, Slope_VPD, Vapour_Pressure_Deficit)
             #print(Potential_Transpiration_Sunlit)
             # Updating the Leaf object with calculated hourly and potential daily transpiration rates, absorbed radiation, etc.
             Hourly_Transpiration_Sunlit.append(Potential_Transpiration_Sunlit)
@@ -759,7 +752,7 @@ class Leaf_sunlit(Leaf):
         Leaf_Nitrogen_Extinction_Coefficient = self.Leaf_object.Leaf_area_output['Leaf_Nitro_Ext_Coeff']
         Wind_Ext_Coeff = self.Leaf_object.Leaf_area_output['Wind_Ext_Coeff']
         Specific_Leaf_N_Top = self.Leaf_object.specific_Leaf_n_output['Specific_Leaf_N_Top']
-        Specific_Leaf_N_Bottom = self.Leaf_object.specific_Leaf_n_output['Specific_Leaf_N_Bottom']
+        Specific_Leaf_N_Top_Increment = self.Leaf_object.specific_Leaf_n_output['Specific_Leaf_N_Top_Increment']
     
         Hourly_data, _ = Leaf.convert_daily_to_hourly(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Wind_Speed)
     
@@ -847,23 +840,24 @@ class Leaf_sunlit(Leaf):
             Sunlit_Fraction = 1.0 / Direct_Beam_Extinction_Coefficient / Leaf_Area_Index * (1 - np.exp(-Direct_Beam_Extinction_Coefficient * Leaf_Area_Index))
             
             # Adjusting turbulence resistance for the canopy
-            Turbulence_Resistance_Canopy = 0.74 * (np.log((2 - 0.7 * Plant_Height) / (0.1 * Plant_Height))) ** 2 / (0.4 ** 2 * Wind_Speed)
+            Turbulence_Resistance = 0.74 * (np.log((2 - 0.7 * Plant_Height) / (0.1 * Plant_Height))) ** 2 / (0.4 ** 2 * Wind_Speed)
             
             # Calculating Leaf temperature adjustments due to water stress
-            Adjusted_Turbulence_Resistance = Turbulence_Resistance_Canopy * Sunlit_Fraction
-            Temperature_Difference = Leaf.Limit_Function(-25, 25, (Absorbed_Radiation_Sunlit - Latent_Heat_Vaporization * Actual_Transpiration_Sunlit) * (Boundary_Layer_Resistance_Heat_Sunlit + Adjusted_Turbulence_Resistance) / Volumetric_Heat_Capacity_Air)
-            
+            Turbulence_Resistance_Sunlit = Turbulence_Resistance * Sunlit_Fraction
+            Temperature_Difference =  (Absorbed_Radiation_Sunlit - Latent_Heat_Vaporization * Actual_Transpiration_Sunlit) * (Boundary_Layer_Resistance_Heat_Sunlit + Turbulence_Resistance_Sunlit) / Volumetric_Heat_Capacity_Air
+            Temperature_Difference=max(-25, min(Temperature_Difference, 25)) 
+
             Adjusted_Leaf_Temperature = Hourly_Temp + Temperature_Difference
                         
             # Adjusting stomatal resistance to water under water stress conditions
-            Adjusted_Stomatal_Resistance_Water = (Transpiration_Sunlit - Actual_Transpiration_Sunlit) * (Slope_VPD * (Boundary_Layer_Resistance_Heat_Sunlit + Adjusted_Turbulence_Resistance) + Psychrometric_Constant * (Boundary_Layer_Resistance_Water_Sunlit + Adjusted_Turbulence_Resistance)) / Actual_Transpiration_Sunlit / Psychrometric_Constant + Transpiration_Sunlit / Actual_Transpiration_Sunlit * Stomatal_Resistance_Water_Sunlit
+            Adjusted_Stomatal_Resistance_Water = (Transpiration_Sunlit - Actual_Transpiration_Sunlit) * (Slope_VPD * (Boundary_Layer_Resistance_Heat_Sunlit + Turbulence_Resistance_Sunlit) + Psychrometric_Constant * (Boundary_Layer_Resistance_Water_Sunlit + Turbulence_Resistance_Sunlit)) / Actual_Transpiration_Sunlit / Psychrometric_Constant + Transpiration_Sunlit / Actual_Transpiration_Sunlit * Stomatal_Resistance_Water_Sunlit
             
             # Absorbed PAR calculation for sunlit leaves
             Absorbed_PAR_Sunlit, _ = Leaf.LIGHT_ABSORB(Scattering_Coefficient_PAR, Direct_Beam_Extinction_Coefficient, Scattered_Beam_Extinction_Coefficient_PAR, Diffuse_Extinction_Coefficient_PAR, Canopy_Beam_Reflection_Coefficient_PAR, Canopy_Diffuse_Reflection_Coefficient_PAR, Direct_PAR, Diffuse_PAR, Leaf_Area_Index)
             
             # Adjusting photosynthetic nitrogen for sunlit parts of the canopy
             Photosynthetic_Nitrogen_Sunlit = Specific_Leaf_N_Top * (1. - np.exp(-(Leaf_Nitrogen_Extinction_Coefficient + Direct_Beam_Extinction_Coefficient) * Leaf_Area_Index)) / (Leaf_Nitrogen_Extinction_Coefficient + Direct_Beam_Extinction_Coefficient) - self.Leaf_object.Min_Specific_Leaf_N * (1. - np.exp(-Direct_Beam_Extinction_Coefficient * Leaf_Area_Index)) / Direct_Beam_Extinction_Coefficient
-            Photosynthetic_Nitrogen_Sunlit_DELTA = Specific_Leaf_N_Bottom * (1. - np.exp(-(Leaf_Nitrogen_Extinction_Coefficient + Direct_Beam_Extinction_Coefficient) * Leaf_Area_Index)) / (Leaf_Nitrogen_Extinction_Coefficient + Direct_Beam_Extinction_Coefficient) - self.Leaf_object.Min_Specific_Leaf_N * (1. - np.exp(-Direct_Beam_Extinction_Coefficient * Leaf_Area_Index)) / Direct_Beam_Extinction_Coefficient
+            Photosynthetic_Nitrogen_Sunlit_DELTA = Specific_Leaf_N_Top_Increment * (1. - np.exp(-(Leaf_Nitrogen_Extinction_Coefficient + Direct_Beam_Extinction_Coefficient) * Leaf_Area_Index)) / (Leaf_Nitrogen_Extinction_Coefficient + Direct_Beam_Extinction_Coefficient) - self.Leaf_object.Min_Specific_Leaf_N * (1. - np.exp(-Direct_Beam_Extinction_Coefficient * Leaf_Area_Index)) / Direct_Beam_Extinction_Coefficient
 
             # Calculating internal CO2 and photosynthesis adjustments
             Sat_Vapor_Pressure_Leaf, Intercellular_CO2_Leaf = Leaf.INTERNAL_CO2(Adjusted_Leaf_Temperature, Vapour_Pressure, Vapor_Pressure_Deficit_Response, self.Leaf_object.Ambient_CO2, self.Leaf_object.C3C4_Pathway)
@@ -872,9 +866,9 @@ class Leaf_sunlit(Leaf):
             Actual_Photosynthesis_Rate_DELTA, Dark_Respiration_Rate_DELTA = Leaf.PHOTOSYN(self.Leaf_object.C3C4_Pathway, Absorbed_PAR_Sunlit, Adjusted_Leaf_Temperature, Intercellular_CO2_Leaf, Photosynthetic_Nitrogen_Sunlit_DELTA, self.Leaf_object.Activation_Energy_Jmax, self.Leaf_object.Vcmax_LeafN_Slope, self.Leaf_object.Jmax_LeafN_Slope, self.Leaf_object.Photosynthetic_Light_Response_Factor)
 
             # Actual photosynthesis under water stress condition
-            Actual_Photosynthesis = (1.6 * Stomatal_Resistance_Water_Sunlit + 1.3 * Boundary_Layer_Resistance_Water_Sunlit + Adjusted_Turbulence_Resistance) / (1.6 * Adjusted_Stomatal_Resistance_Water + 1.3 * Boundary_Layer_Resistance_Water_Sunlit + Adjusted_Turbulence_Resistance) * (Actual_Photosynthesis_Rate - Dark_Respiration_Rate) + Dark_Respiration_Rate
-            Actual_Photosynthesis_DELTA = (1.6 * Stomatal_Resistance_Water_Sunlit + 1.3 * Boundary_Layer_Resistance_Water_Sunlit + Adjusted_Turbulence_Resistance) / (1.6 * Adjusted_Stomatal_Resistance_Water + 1.3 * Boundary_Layer_Resistance_Water_Sunlit + Adjusted_Turbulence_Resistance) * (Actual_Photosynthesis_Rate_DELTA - Dark_Respiration_Rate_DELTA) + Dark_Respiration_Rate_DELTA
-
+            Actual_Photosynthesis = (1.6 * Stomatal_Resistance_Water_Sunlit + 1.3 * Boundary_Layer_Resistance_Water_Sunlit + Turbulence_Resistance_Sunlit) / (1.6 * Adjusted_Stomatal_Resistance_Water + 1.3 * Boundary_Layer_Resistance_Water_Sunlit + Turbulence_Resistance_Sunlit) * (Actual_Photosynthesis_Rate - Dark_Respiration_Rate) + Dark_Respiration_Rate
+            Actual_Photosynthesis_DELTA = (1.6 * Stomatal_Resistance_Water_Sunlit + 1.3 * Boundary_Layer_Resistance_Water_Sunlit + Turbulence_Resistance_Sunlit) / (1.6 * Adjusted_Stomatal_Resistance_Water + 1.3 * Boundary_Layer_Resistance_Water_Sunlit + Turbulence_Resistance_Sunlit) * (Actual_Photosynthesis_Rate_DELTA - Dark_Respiration_Rate_DELTA) + Dark_Respiration_Rate_DELTA
+            # print(Actual_Photosynthesis_DELTA,Actual_Photosynthesis)
             # Appending results for analysis
             Actual_Photosynthesis_list.append(Actual_Photosynthesis)
             Actual_Photosynthesis_DELTA_list.append(Actual_Photosynthesis_DELTA)
@@ -995,13 +989,16 @@ class Leaf_Shaded(Leaf):
             Conductance_CO2_Shaded = (Potential_Photosynthesis_Shaded - Dark_Respiration_Shaded) * (273. + Hourly_Temp) / 0.53717 / (self.Leaf_object.Ambient_CO2 - Internal_CO2)
             
             # Turbulence resistance for canopy
-            Turbulence_Resist_Canopy = 0.74 * (np.log((2. - 0.7 * Plant_Height) / (0.1 * Plant_Height))) ** 2 / (0.4 ** 2 * Wind_Speed)
-                            
-            Stomatal_Resist_Water_Shaded = max(1E-30, 1 / Conductance_CO2_Shaded - Boundary_Layer_Water_Resist_Shaded * 1.3 - Turbulence_Resist_Canopy) / 1.6
+            Turbulence_Resistance = 0.74 * (np.log((2. - 0.7 * Plant_Height) / (0.1 * Plant_Height))) ** 2 / (0.4 ** 2 * Wind_Speed)
+            Turbulence_Resistance_Shaded=Turbulence_Resistance * Fraction_Shaded        
+            Stomatal_Resist_Water_Shaded = max(1E-30, 1 / Conductance_CO2_Shaded - Boundary_Layer_Water_Resist_Shaded * 1.3 - Turbulence_Resistance_Shaded) / 1.6
             
-            Potential_Transpiration_Shaded, Net_Radiation_Absorbed_Shaded = Leaf.Penman_Monteith(Stomatal_Resist_Water_Shaded, Turbulence_Resist_Canopy, Boundary_Layer_Water_Resist_Shaded, Boundary_Layer_Heat_Resist_Shaded, Absorbed_Total_Radiation_Shaded, Atmospheric_Transmissivity, Fraction_Shaded, Hourly_Temp, Vapour_Pressure, Slope_SVP, Vapour_Pressure_Deficit)
+            Potential_Transpiration_Shaded, Net_Radiation_Absorbed_Shaded = Leaf.Penman_Monteith(Stomatal_Resist_Water_Shaded, Turbulence_Resistance_Shaded, Boundary_Layer_Water_Resist_Shaded, Boundary_Layer_Heat_Resist_Shaded, Absorbed_Total_Radiation_Shaded, Atmospheric_Transmissivity, Fraction_Shaded, Hourly_Temp, Vapour_Pressure, Slope_SVP, Vapour_Pressure_Deficit)
             # Calculate Leaf temperature for shaded leaves
-            Temperature_Difference_Shaded = (Net_Radiation_Absorbed_Shaded - Latent_Heat_Vaporization * Potential_Transpiration_Shaded) * (Boundary_Layer_Heat_Resist_Shaded + (Turbulence_Resist_Canopy * Fraction_Shaded)) / Volumetric_Heat_Capacity_Air
+            Temperature_Difference_Shaded = (Net_Radiation_Absorbed_Shaded - Latent_Heat_Vaporization * Potential_Transpiration_Shaded) * (Boundary_Layer_Heat_Resist_Shaded + Turbulence_Resistance_Shaded) / Volumetric_Heat_Capacity_Air
+            Temperature_Difference_Shaded=max(-25, min(Temperature_Difference_Shaded, 25)) 
+
+            
             Hourly_Air_Temperature_Difference_Shaded.append(Temperature_Difference_Shaded)
             
             Shaded_Leaf_Temperature = Hourly_Temp + Temperature_Difference_Shaded
@@ -1183,12 +1180,12 @@ class Leaf_Shaded(Leaf):
             
             # Turbulence resistance for canopy
             Turbulence_Resistance = 0.74 * (np.log((2. - 0.7 * Plant_Height) / (0.1 * Plant_Height))) ** 2 / (0.4 ** 2 * Wind_Speed)
-            
+            Turbulence_Resistance_Shaded =Turbulence_Resistance*Fraction_Shaded
             # Adjusted stomatal resistance to water vapor
-            Adjusted_Stomatal_Resistance = max(1E-30, 1 / Adjusted_CO2_Conductance - Boundary_Layer_Water_Resist_Shaded * 1.3 - Turbulence_Resistance * Fraction_Shaded) / 1.6
+            Adjusted_Stomatal_Resistance = max(1E-30, 1 / Adjusted_CO2_Conductance - Boundary_Layer_Water_Resist_Shaded * 1.3 - Turbulence_Resistance_Shaded) / 1.6
             
             # Calculating potential transpiration for shaded leaves and absorbed radiation
-            Potential_Transpiration_Shaded, Absorbed_Radiation_Shaded = Leaf.Penman_Monteith(Adjusted_Stomatal_Resistance, Turbulence_Resistance * Fraction_Shaded, Boundary_Layer_Water_Resist_Shaded, Boundary_Layer_Heat_Resist_Shaded, Total_Absorbed_Radiation_Shaded, Atmospheric_Transmissivity, Fraction_Shaded, Shaded_Leaf_Temp, Vapour_Pressure, Slope_VPD_Response, Vapor_Pressure_Deficit)
+            Potential_Transpiration_Shaded, Absorbed_Radiation_Shaded = Leaf.Penman_Monteith(Adjusted_Stomatal_Resistance, Turbulence_Resistance_Shaded, Boundary_Layer_Water_Resist_Shaded, Boundary_Layer_Heat_Resist_Shaded, Total_Absorbed_Radiation_Shaded, Atmospheric_Transmissivity, Fraction_Shaded, Shaded_Leaf_Temp, Vapour_Pressure, Slope_VPD_Response, Vapor_Pressure_Deficit)
             #print(Potential_Transpiration_Shaded)
             
             # Appending calculated values to their respective lists
@@ -1224,7 +1221,7 @@ class Leaf_Shaded(Leaf):
         Leaf_N_Extinction_Coeff = self.Leaf_object.Leaf_area_output['Leaf_Nitro_Ext_Coeff']
         Wind_Extinction_Coeff = self.Leaf_object.Leaf_area_output['Wind_Ext_Coeff']
         Specific_Leaf_N_Top = self.Leaf_object.specific_Leaf_n_output['Specific_Leaf_N_Top']
-        Specific_Leaf_N_Bottom = self.Leaf_object.specific_Leaf_n_output['Specific_Leaf_N_Bottom']
+        Specific_Leaf_N_Top_Increment = self.Leaf_object.specific_Leaf_n_output['Specific_Leaf_N_Top_Increment']
 
         # Convert daily data to hourly
         Hourly_data, _ = Leaf.convert_daily_to_hourly(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Wind_Speed)
@@ -1313,19 +1310,21 @@ class Leaf_Shaded(Leaf):
             Boundary_Layer_Water_Resist_Shaded = 0.93 * Boundary_Layer_Heat_Resist_Shaded  # Boundary layer resistance to water, shaded part   
    
             # Turbulence resistance for canopy
-            Turbulence_Resistance_Canopy = 0.74 * (np.log((2. - 0.7 * Plant_Height) / (0.1 * Plant_Height))) ** 2 / (0.4 ** 2 * Wind_Speed)
-            #print(Turbulence_Resistance_Canopy)
+            Turbulence_Resistance = 0.74 * (np.log((2. - 0.7 * Plant_Height) / (0.1 * Plant_Height))) ** 2 / (0.4 ** 2 * Wind_Speed)
+            
+            #print(Turbulence_Resistance)
             
             # Leaf temperature if water stress occurs
-            Adjusted_Turbulence_Resistance = Turbulence_Resistance_Canopy * Fraction_Shaded
-            Temperature_Difference = Leaf.Limit_Function(-25., 25., (Radiation_Shaded - Latent_Heat_Vaporization * Actual_Transpiration_Shaded) * (Boundary_Layer_Heat_Resist_Shaded + Adjusted_Turbulence_Resistance) / Volumetric_Heat_Capacity_Air)
-            
+            Turbulence_Resistance_Shaded = Turbulence_Resistance * Fraction_Shaded
+            Temperature_Difference =  (Radiation_Shaded - Latent_Heat_Vaporization * Actual_Transpiration_Shaded) * (Boundary_Layer_Heat_Resist_Shaded + Turbulence_Resistance_Shaded) / Volumetric_Heat_Capacity_Air
+            Temperature_Difference=max(-25, min(Temperature_Difference, 25)) 
+
             Adjusted_Leaf_Temperature = Hourly_Temp + Temperature_Difference
             
 
 
             # Stomatal resistance to water if water stress occurs
-            Adjusted_Stomatal_Resistance_Water_Stress = (Potential_Transpiration_Shaded - Actual_Transpiration_Shaded) * (Slope_VPD * (Boundary_Layer_Heat_Resist_Shaded + Adjusted_Turbulence_Resistance) + Psychrometric_Constant * (Boundary_Layer_Water_Resist_Shaded + Adjusted_Turbulence_Resistance)) / Actual_Transpiration_Shaded / Psychrometric_Constant + Potential_Transpiration_Shaded / Actual_Transpiration_Shaded * Stomatal_Resist_Water_Shaded
+            Adjusted_Stomatal_Resistance_Water_Stress = (Potential_Transpiration_Shaded - Actual_Transpiration_Shaded) * (Slope_VPD * (Boundary_Layer_Heat_Resist_Shaded + Turbulence_Resistance_Shaded) + Psychrometric_Constant * (Boundary_Layer_Water_Resist_Shaded + Turbulence_Resistance_Shaded)) / Actual_Transpiration_Shaded / Psychrometric_Constant + Potential_Transpiration_Shaded / Actual_Transpiration_Shaded * Stomatal_Resist_Water_Shaded
 
 
             # Absorbed PAR by shaded leaves
@@ -1337,8 +1336,8 @@ class Leaf_Shaded(Leaf):
             Photosynthetic_Nitrogen_Sunlit = Specific_Leaf_N_Top * (1. - np.exp(-(Leaf_N_Extinction_Coeff + Direct_Beam_Extinction_Coefficient) * Leaf_Area_Index)) / (Leaf_N_Extinction_Coeff + Direct_Beam_Extinction_Coefficient) - self.Leaf_object.Min_Specific_Leaf_N * (1. - np.exp(-Direct_Beam_Extinction_Coefficient * Leaf_Area_Index)) / Direct_Beam_Extinction_Coefficient
             Photosynthetic_Nitrogen_Shaded = Photosynthetic_Nitrogen_Canopy - Photosynthetic_Nitrogen_Sunlit
             
-            Photosynthetic_Nitrogen_Canopy_DELTA =(Specific_Leaf_N_Bottom * (1. - np.exp(-Leaf_N_Extinction_Coeff * Leaf_Area_Index)) / Leaf_N_Extinction_Coeff - self.Leaf_object.Min_Specific_Leaf_N * Leaf_Area_Index)
-            Photosynthetic_Nitrogen_Sunlit_DELTA = Specific_Leaf_N_Bottom * (1. - np.exp(-(Leaf_N_Extinction_Coeff + Direct_Beam_Extinction_Coefficient) * Leaf_Area_Index)) / (Leaf_N_Extinction_Coeff + Direct_Beam_Extinction_Coefficient) - self.Leaf_object.Min_Specific_Leaf_N * (1. - np.exp(-Direct_Beam_Extinction_Coefficient * Leaf_Area_Index)) / Direct_Beam_Extinction_Coefficient
+            Photosynthetic_Nitrogen_Canopy_DELTA =(Specific_Leaf_N_Top_Increment * (1. - np.exp(-Leaf_N_Extinction_Coeff * Leaf_Area_Index)) / Leaf_N_Extinction_Coeff - self.Leaf_object.Min_Specific_Leaf_N * Leaf_Area_Index)
+            Photosynthetic_Nitrogen_Sunlit_DELTA = Specific_Leaf_N_Top_Increment * (1. - np.exp(-(Leaf_N_Extinction_Coeff + Direct_Beam_Extinction_Coefficient) * Leaf_Area_Index)) / (Leaf_N_Extinction_Coeff + Direct_Beam_Extinction_Coefficient) - self.Leaf_object.Min_Specific_Leaf_N * (1. - np.exp(-Direct_Beam_Extinction_Coefficient * Leaf_Area_Index)) / Direct_Beam_Extinction_Coefficient
             Photosynthetic_Nitrogen_Shaded_DELTA = Photosynthetic_Nitrogen_Canopy_DELTA - Photosynthetic_Nitrogen_Sunlit_DELTA
 
             
@@ -1352,8 +1351,8 @@ class Leaf_Shaded(Leaf):
             
             # print(Absorbed_PAR_Leaf, Dark_Respiration)
             # Actual photosynthesis under water stress condition
-            Actual_Photosynthesis_Water_Stress = (1.6 * Stomatal_Resist_Water_Shaded + 1.3 * Boundary_Layer_Water_Resist_Shaded + Adjusted_Turbulence_Resistance) / (1.6 * Adjusted_Stomatal_Resistance_Water_Stress + 1.3 * Boundary_Layer_Water_Resist_Shaded + Adjusted_Turbulence_Resistance) * (Actual_Photosynthesis_Rate - Dark_Respiration) + Dark_Respiration
-            Actual_Photosynthesis_Water_Stress_DELTA = (1.6 * Stomatal_Resist_Water_Shaded + 1.3 * Boundary_Layer_Water_Resist_Shaded + Adjusted_Turbulence_Resistance) / (1.6 * Adjusted_Stomatal_Resistance_Water_Stress + 1.3 * Boundary_Layer_Water_Resist_Shaded + Adjusted_Turbulence_Resistance) * (Actual_Photosynthesis_Rate_DELTA - Dark_Respiration_DELTA) + Dark_Respiration_DELTA
+            Actual_Photosynthesis_Water_Stress = (1.6 * Stomatal_Resist_Water_Shaded + 1.3 * Boundary_Layer_Water_Resist_Shaded + Turbulence_Resistance_Shaded) / (1.6 * Adjusted_Stomatal_Resistance_Water_Stress + 1.3 * Boundary_Layer_Water_Resist_Shaded + Turbulence_Resistance_Shaded) * (Actual_Photosynthesis_Rate - Dark_Respiration) + Dark_Respiration
+            Actual_Photosynthesis_Water_Stress_DELTA = (1.6 * Stomatal_Resist_Water_Shaded + 1.3 * Boundary_Layer_Water_Resist_Shaded + Turbulence_Resistance_Shaded) / (1.6 * Adjusted_Stomatal_Resistance_Water_Stress + 1.3 * Boundary_Layer_Water_Resist_Shaded + Turbulence_Resistance_Shaded) * (Actual_Photosynthesis_Rate_DELTA - Dark_Respiration_DELTA) + Dark_Respiration_DELTA
 
 
             # Appending the calculated values to their respective lists
