@@ -1,13 +1,14 @@
 import math
+# from Leaf import Leaf, Leaf_sunlit,Leaf_Shaded
 import Leaf
 import numpy as np
 
 #initializing intermediate variables
 Germination_Efficiency = 0.35  # Growth efficiency
-CarbonFrac_Veg = 0.473  # Carbon fraction in vegetative biomass
-FractionProtein_StorageOrgans = 0.13  # Fraction of protein in storage organs
-FractionCarbs_StorageOrgans = 0.71  # Fraction of carbohydrates in storage organs
-CarbonFraction_Organs = 0.44936  # Carbon fraction in the storage organs
+CarbonFrac_Veg = 0.45  # Carbon fraction in vegetative biomass
+# FractionProtein_StorageOrgans = 0.13  # Fraction of protein in storage organs
+# FractionCarbs_StorageOrgans = 0.71  # Fraction of carbohydrates in storage organs
+Carbon_Fraction_Seed = 0.44936  # Carbon fraction in the storage organs
 Growth_Efficiency_Veg = 0.8  # Growth efficiency for vegetative organs
 Growth_Efficiency_Seed = 0.8  # Growth efficiency for storage organs
 
@@ -23,6 +24,10 @@ class Canopy:
                  IniLeafN_Conc, MaxPlant_Height,
                  legume,
                  MaxStemGrowth_DS, MaxSeedGrowth_DS, StemDW_Height, Model_TimeStep):
+        # self.leaf = Leaf()
+        # self.leaf_sunlit = Leaf_sunlit(self.leaf)
+        # self.leaf_shaded = Leaf_Shaded(self.leaf)
+
         # Thermal Units
         self.BTemp_Phen = BTemp_Phen
         self.OTemp_Phen = OTemp_Phen
@@ -63,20 +68,25 @@ class Canopy:
         #initializing intermediate variables
         self.Germination_Efficiency = Germination_Efficiency  # Growth efficiency
         self.CarbonFrac_Veg = CarbonFrac_Veg  # Carbon fraction in vegetative biomass
-        self.FractionProtein_StorageOrgans = FractionProtein_StorageOrgans  # Fraction of protein in storage organs
-        self.FractionCarbs_StorageOrgans = FractionCarbs_StorageOrgans  # Fraction of carbohydrates in storage organs
-        self.CarbonFraction_Organs = CarbonFraction_Organs  # Carbon fraction in the storage organs
+        # self.FractionProtein_StorageOrgans = FractionProtein_StorageOrgans  # Fraction of protein in storage organs
+        # self.FractionCarbs_StorageOrgans = FractionCarbs_StorageOrgans  # Fraction of carbohydrates in storage organs
+        self.Carbon_Fraction_Seed = Carbon_Fraction_Seed  # Carbon fraction in the storage organs
         self.Growth_Efficiency_Veg = Growth_Efficiency_Veg  # Growth efficiency for storage organs
         self.Growth_Efficiency_Seed = Growth_Efficiency_Seed  # Growth efficiency for storage organs
 
-        self.Initial_Leaf_Carbon = self.Plant_Density * self.Seed_Weight * self.CarbonFraction_Organs * self.Germination_Efficiency * self.CarbonAlloc_Shoot
-        self.Initial_Root_Carbon = self.Plant_Density * self.Seed_Weight * self.CarbonFraction_Organs * self.Germination_Efficiency * (1.0 - self.CarbonAlloc_Shoot)
+        self.Initial_Leaf_Carbon = self.Plant_Density * self.Seed_Weight * self.Carbon_Fraction_Seed * self.Germination_Efficiency * self.CarbonAlloc_Shoot
+        self.Initial_Root_Carbon = self.Plant_Density * self.Seed_Weight * self.Carbon_Fraction_Seed * self.Germination_Efficiency * (1.0 - self.CarbonAlloc_Shoot)
         self.Initial_Leaf_N = self.IniLeafN_Conc * self.Initial_Leaf_Carbon / self.CarbonFrac_Veg
         self.Initial_Root_N = (self.Plant_Density * self.Seed_Weight * self.Germination_Efficiency * self.IniLeafN_Conc * self.CarbonAlloc_Shoot / self.NitrogenAlloc_Shoot) - self.Initial_Leaf_N
         self.Initial_Plant_Height = self.MaxPlant_Height / 1000.0  # Converting to a different unit if necessary
         self.MinLeafN_Conc = self.SLA_Const * self.Min_Specific_Leaf_N
         self.Initial_LAI = self.Initial_Leaf_Carbon / self.CarbonFrac_Veg * self.SLA_Const
         self.Specific_Leaf_N_Bottom = self.Initial_Leaf_N / self.Initial_LAI
+
+        self.Initial_N_Factor=0.75
+        self.Final_N_Factor=1
+        self.Developement_Stage_Max_N_dynamic=1.5
+        self.Nitrogen_Leaf_ChangeRate_Positive=0
 
         # Actual canopy conditions
         self.Actual_AirCanopy_TemperatureDifference = 0
@@ -123,7 +133,6 @@ class Canopy:
     
         self.Dinitrogen_fixation_cost = 0
         self.Carbon_Shoot = 0
-        self.Root_Carbon = 0
         self.Nitrogen_Shoot = 0
 
         self.Model_TimeStep= Model_TimeStep
@@ -176,6 +185,7 @@ class Canopy:
         self.Stem_Carbon = 0
         self.Seed_Carbon = 0
         self.Root_Carbon = self.Initial_Root_Carbon
+        self.Total_Root_Carbon=0
         self.DeadRoot_Carbon = 0
         self.DeadLeaf_Carbon_Litter = 0
 
@@ -289,6 +299,7 @@ class Canopy:
         State= State.lower()
         if State=='p':
             self.Potential_Canopy_Photosynthesis=daily_average_canopy_photosyn * dayl*  3600
+
         elif State=='a':
             self.Actual_Canopy_Photosynthesis=daily_average_canopy_photosyn * dayl*  3600
 
@@ -314,6 +325,54 @@ class Canopy:
         else:
             raise ValueError("Invalid State provided. State must be 'A' for Actual or 'P' for Potential.")
 
+    def Water_Stress_Status_Check(self,water_supply_for_Transpiration,water_supply_for_evaporation,Actual_Soil_Evaporation,
+                                  average_root_zone_water_content,
+                                  transpiration_SU, transpiration_SH,
+                                  Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, 
+                                  Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temp, Min_Temp, Vapour_Pressure,
+                                  Wind_Speed, Plant_Height,
+                                  Root_Depth,
+                                  Hourly_Sunlit_Leaf_Temp, Hourly_Shaded_Leaf_Temp,
+                                  Hourly_Soil_Evap,C3C4_Pathway,
+                                  Leaf_sunlit_object,
+                                  Leaf_shaded_object,
+                                  Leaf_object):
+
+        # Evaporation_layer_leftover=max(0,(irrigation_amount+water_supply_for_evaporation-Actual_Soil_Evaporation))
+        # if Evaporation_layer_leftover < -0.00001:
+        #     print(water_supply_for_evaporation,Actual_Soil_Evaporation,Evaporation_layer_leftover)
+        #     raise ValueError('Evaporation_layer_leftover does not match up!')
+        # Maximum_Possible_Transpiration = max(1e-32, 1000*average_root_zone_water_content -water_supply_for_evaporation+Evaporation_layer_leftover)
+        
+        Maximum_Possible_Transpiration=water_supply_for_Transpiration
+        Water_Stress_Fraction=Maximum_Possible_Transpiration/self.Actual_Canopy_Transpiration
+        # print('C_339',Water_Stress_Fraction,self.Actual_Canopy_Transpiration)
+        # if self.Actual_Canopy_Transpiration > Maximum_Possible_Transpiration :
+        #     Water_Stress_Fraction=Maximum_Possible_Transpiration/self.Actual_Canopy_Transpiration
+        #     transpiration_SU=np.array(transpiration_SU)*Water_Stress_Fraction
+        #     transpiration_SH=np.array(transpiration_SH)*Water_Stress_Fraction
+        # else:
+        #     transpiration_SU=np.array(transpiration_SU)
+        #     transpiration_SH=np.array(transpiration_SH)
+        g=0
+        while Water_Stress_Fraction<0.9 and Water_Stress_Fraction>0.1:
+            g+=1
+            if g>5:
+                raise ValueError ('Tr not converged')
+            Leaf_shaded_object.Update_LeafTemp_Photosynthesis_if_WaterStress(water_supply_for_Transpiration,Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure,
+                                                              Solar_Radiation, Max_Temp, Min_Temp, Vapour_Pressure, Wind_Speed, Plant_Height,
+                                                              average_root_zone_water_content,water_supply_for_evaporation, evaporation_depth, Root_Depth,
+                                                              Hourly_Sunlit_Leaf_Temp, Hourly_Shaded_Leaf_Temp,
+                                                              self.Actual_Canopy_Transpiration,Actual_Soil_Evaporation,Hourly_Soil_Evap,C3C4_Pathway)
+
+            Leaf_sunlit_object.Update_LeafTemp_Photosynthesis_if_WaterStress(water_supply_for_Transpiration,Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure,
+                                                              Solar_Radiation, Max_Temp, Min_Temp, Vapour_Pressure, Wind_Speed, Plant_Height, average_root_zone_water_content,
+                                                              water_supply_for_evaporation,evaporation_depth, Root_Depth,
+                                                              Hourly_Sunlit_Leaf_Temp, Hourly_Shaded_Leaf_Temp,
+                                                              self.Actual_Canopy_Transpiration,Actual_Soil_Evaporation, Hourly_Soil_Evap,C3C4_Pathway)    
+            self.Update_Canopy_Transpiration("A",Leaf_object.Hourly_Transpiration_Shaded,Leaf_object.Hourly_Transpiration_Sunlit,Day_Length)
+            Water_Stress_Fraction=Maximum_Possible_Transpiration/self.Actual_Canopy_Transpiration
+            # print(Water_Stress_Fraction)
         
    
 
@@ -382,7 +441,7 @@ class Canopy:
 
 
     def Initialize_Biomass_Formation(self):
-        Seed_Dry_Weight = self.Seed_Carbon / self.CarbonFraction_Organs # Dry weight of seed
+        Seed_Dry_Weight = self.Seed_Carbon / self.Carbon_Fraction_Seed # Dry weight of seed
         LiveLeaf_Dry_Weight = self.Leaf_Carbon / self.CarbonFrac_Veg # Dry weight of live leaves
         Stem_Dry_Weight = self.Stem_Carbon / self.CarbonFrac_Veg + self.Stem_CarbonReserve / 0.444 # Dry weight of stems
         LiveRoot_Dry_Weight = self.Root_Carbon / self.CarbonFrac_Veg + self.Root_CarbonReserve / 0.444 # Dry weight of live roots
@@ -404,7 +463,7 @@ class Canopy:
         self.LiveRoot_Dry_Weight = LiveRoot_Dry_Weight
         self.Seed_Dry_Weight = Seed_Dry_Weight  
         self.DeadRoot_Dry_Weight = DeadRoot_Dry_Weight
-
+        # print(self.Development_Stage,self.LiveRoot_Dry_Weight,self.Root_Carbon,self.Root_CarbonReserve)
 
 
     def Initialize_Nitrogen_Accumulation(self):
@@ -434,11 +493,11 @@ class Canopy:
 
     def Initialize_Carbon_Accumulation(self):
         Carbon_Shoot = self.Leaf_Carbon + self.Stem_Carbon + self.Stem_CarbonReserve + self.Seed_Carbon
-        Root_Carbon = self.Root_Carbon + self.Root_CarbonReserve
-        Carbon_Total = Carbon_Shoot + Root_Carbon
+        Total_Root_Carbon = self.Root_Carbon + self.Root_CarbonReserve
+        Carbon_Total = Carbon_Shoot + Total_Root_Carbon
         self.Carbon_Total = Carbon_Total
         self.Carbon_Shoot = Carbon_Shoot
-        self.Root_Carbon = Root_Carbon
+        self.Total_Root_Carbon = Total_Root_Carbon
 
 
 
@@ -471,7 +530,7 @@ class Canopy:
         Relative_Shoot_Activity_DELTA  = 12.0 / 44.0 * self.Growth_Efficiency_Veg * (self.Actual_Canopy_Photosynthesis_DELTA - self.Maintenance_Respiration_DELTA - self.Dinitrogen_fixation_cost) / self.Carbon_Shoot
         delta = max(0., (Relative_Shoot_Activity_DELTA - Relative_Shoot_Activity) /(0.001*self.Nitrogen_Total/self.Carbon_Total) )
         # print(delta)
-        Nitrogen_Demand_Activity_Driven = self.Root_Carbon * Relative_Shoot_Activity **2 / delta
+        Nitrogen_Demand_Activity_Driven = self.Total_Root_Carbon * Relative_Shoot_Activity **2 / self.Avoid_Zero_Division(delta)
         Critical_Shoot_N_Concentration = self.IniLeafN_Conc * np.exp(-0.4 * self.Development_Stage)
         Nitrogen_Demand_Deficiency_Driven = self.Switch_Function(self.Development_Stage - 1.0, self.Shoot_Dry_Weight * (Critical_Shoot_N_Concentration - self.Shoot_Nitrogen_Conc) * (1.0 + self.Nitrogen_Root / self.Nitrogen_Shoot) / self.Model_TimeStep, 0.0)
         Intermediate_variable = self.Switch_Function(self.Leaf_Nitrogen_Conc - 1.5 * self.IniLeafN_Conc, max(Nitrogen_Demand_Activity_Driven, Nitrogen_Demand_Deficiency_Driven), 0)
@@ -481,22 +540,23 @@ class Canopy:
         self.delta=delta
         self.Nitrogen_Demand_Activity_Driven = Nitrogen_Demand_Activity_Driven
         self.Nitrogen_Demand = Nitrogen_Demand
+        self.Relative_Shoot_Activity  = Relative_Shoot_Activity 
+        # print(Relative_Shoot_Activity)
+
         # print(Nitrogen_Demand_Activity_Driven)
         # print(Nitrogen_Demand)
     
 
 
 
-    def Calculate_Nitrogen_Partitioning(self, Specific_Leaf_N_Top_Increment):
-        Nitrogen_Carbon_Ratio = self.Switch_Function(Specific_Leaf_N_Top_Increment - self.Min_Specific_Leaf_N, 0, min(self.MaxN_Uptake, self.Nitrogen_Demand_Activity_Driven)) / (self.Growth_Efficiency_Veg * (self.Actual_Canopy_Photosynthesis - self.Maintenance_Respiration - self.Dinitrogen_fixation_cost) * 12 / 44)
-        Relative_Shoot_Activity  = 12.0 / 44.0 * self.Growth_Efficiency_Veg * (self.Actual_Canopy_Photosynthesis - self.Maintenance_Respiration - self.Dinitrogen_fixation_cost) / self.Carbon_Shoot
-        # print(self.Potential_Canopy_Photosynthesis)
-        Fraction_Nitrogen_to_Shoot = 1 / (1 + Nitrogen_Carbon_Ratio * self.delta / Relative_Shoot_Activity  * self.Carbon_Shoot / self.Root_Carbon * self.Nitrogen_Root / self.Nitrogen_Shoot)
+    def Calculate_Nitrogen_Partitioning(self, Specific_Leaf_N_Top):
+        Nitrogen_Carbon_Ratio = self.Switch_Function(Specific_Leaf_N_Top - self.Min_Specific_Leaf_N, 0, min(self.MaxN_Uptake, self.Nitrogen_Demand_Activity_Driven)) / (self.Growth_Efficiency_Veg * (self.Actual_Canopy_Photosynthesis - self.Maintenance_Respiration - self.Dinitrogen_fixation_cost) * 12 / 44)
         
-        self.Relative_Shoot_Activity  = Relative_Shoot_Activity 
+        # print(self.Potential_Canopy_Photosynthesis)
+        Fraction_Nitrogen_to_Shoot = 1 / (1 + Nitrogen_Carbon_Ratio * self.delta / self.Relative_Shoot_Activity  * self.Carbon_Shoot / self.Total_Root_Carbon * self.Nitrogen_Root / self.Nitrogen_Shoot)
+        
         self.Fraction_Nitrogen_to_Shoot = Fraction_Nitrogen_to_Shoot
         self.Nitrogen_Carbon_Ratio = Nitrogen_Carbon_Ratio
-        # print(Relative_Shoot_Activity)
         # print(Nitrogen_Carbon_Ratio)
 
 
@@ -505,22 +565,22 @@ class Canopy:
         # print("End_SeedFill_DS:",End_SeedFill_DS)
         Nitrogen_Remobilization = Remobilizable_N_seedgrowth_before_seedfilling + (Remobilizable_N_seedgrowth_after_seedfilling - Remobilizable_N_seedgrowth_before_seedfilling) * (End_SeedFill_DS - 1.0) / self.Avoid_Zero_Division(min(self.Development_Stage, End_SeedFill_DS) - 1)
         Total_Seed_Number = Nitrogen_Remobilization / Fraction_SeedNitrogen_Remobilizable / Standard_SeedNitrogen_Conc / Seed_Weight
-        Thousand_Seed_Weight = self.Seed_Carbon / self.CarbonFraction_Organs / self.Avoid_Zero_Division(Total_Seed_Number) * 1000
+        Thousand_Seed_Weight = self.Seed_Carbon / self.Carbon_Fraction_Seed / self.Avoid_Zero_Division(Total_Seed_Number) * 1000
         
         self.End_SeedFill_DS = End_SeedFill_DS
         self.Total_Seed_Number = Total_Seed_Number
         self.Thousand_Seed_Weight = Thousand_Seed_Weight
         #print(End_SeedFill_DS,Total_Seed_Number,Thousand_Seed_Weight)
     
-    def Calculate_Senescence(self, Carbon_determined_LAI, Nitrogen_determined_LAI, Time_Step):
-        LeafWeight_Loss_Max = (Carbon_determined_LAI - min(Carbon_determined_LAI, Nitrogen_determined_LAI)) / self.SLA_Const / Time_Step
-        LeafWeight_Loss_ChangeRate = min(self.LiveLeaf_Dry_Weight - 1.e-5, LeafWeight_Loss_Max + self.REANOR_Function(self.End_SeedFill_DS - self.Development_Stage, LeafWeight_Loss_Max) * 0.03 * self.LiveLeaf_Dry_Weight)
-        Leaf_Nitrogen_Loss_ChangeRate = min(LeafWeight_Loss_ChangeRate, LeafWeight_Loss_Max) * self.MinLeafN_Conc + (LeafWeight_Loss_ChangeRate - min(LeafWeight_Loss_ChangeRate, LeafWeight_Loss_Max)) * (self.Nitrogen_Leaf / self.LiveLeaf_Dry_Weight)
-        Leaf_Carbon_Loss_ChangeRate = LeafWeight_Loss_Max * self.CarbonFrac_Veg
+    def Calculate_Senescence(self, Carbon_determined_LAI, Nitrogen_determined_LAI):
+        LeafWeight_Loss_Intermediate_varialble = (Carbon_determined_LAI - min(Carbon_determined_LAI, Nitrogen_determined_LAI)) / self.SLA_Const / self.Model_TimeStep
+        LeafWeight_Loss_ChangeRate = min(self.LiveLeaf_Dry_Weight - 1.e-5, LeafWeight_Loss_Intermediate_varialble + self.REANOR_Function(self.End_SeedFill_DS - self.Development_Stage, LeafWeight_Loss_Intermediate_varialble) * 0.03 * self.LiveLeaf_Dry_Weight)
+        Leaf_Nitrogen_Loss_ChangeRate = min(LeafWeight_Loss_ChangeRate, LeafWeight_Loss_Intermediate_varialble) * self.MinLeafN_Conc + (LeafWeight_Loss_ChangeRate - min(LeafWeight_Loss_ChangeRate, LeafWeight_Loss_Intermediate_varialble)) * self.Nitrogen_Leaf 
+        Leaf_Carbon_Loss_ChangeRate = LeafWeight_Loss_ChangeRate * self.CarbonFrac_Veg
         
         self.Leaf_Nitrogen_Loss_ChangeRate = Leaf_Nitrogen_Loss_ChangeRate
         self.Leaf_Carbon_Loss_ChangeRate = Leaf_Carbon_Loss_ChangeRate
-        # print(Leaf_Nitrogen_Loss_ChangeRate,Leaf_Carbon_Loss_ChangeRate)
+        # print(Carbon_determined_LAI, Nitrogen_determined_LAI)
 
 
 
@@ -534,7 +594,7 @@ class Canopy:
         self.DailyCarbon_Supply_Shoot = DailyCarbon_Supply_Shoot
         self.DailyCarbon_Supply_Root = DailyCarbon_Supply_Root
         self.Fraction_Carbon_to_Shoot = Fraction_Carbon_to_Shoot
-        #print(DailyCarbon_Supply_Shoot,DailyCarbon_Supply_Root,Fraction_Carbon_to_Shoot)
+        # print(Fraction_Carbon_to_Shoot,self.Nitrogen_Carbon_Ratio ,self.delta , self.Relative_Shoot_Activity )
 
 
 
@@ -545,7 +605,7 @@ class Canopy:
         # print("SeedFill_DS:",SeedFill_DS)
         Seed_GrowthRate = self.DevelopmentRate * ((2 * SeedGrowth_Stop_DS - MaxSeedGrowth_DS) * (SeedGrowth_Stop_DS - SeedFill_DS) /( SeedGrowth_Stop_DS * ((SeedGrowth_Stop_DS - MaxSeedGrowth_DS) ** 2))) * ((SeedFill_DS / SeedGrowth_Stop_DS) ** (MaxSeedGrowth_DS / (SeedGrowth_Stop_DS - MaxSeedGrowth_DS)))
     
-        TotalSeed_Carbons = self.Total_Seed_Number * self.Seed_Weight * self.CarbonFraction_Organs
+        TotalSeed_Carbons = self.Total_Seed_Number * self.Seed_Weight * self.Carbon_Fraction_Seed
         
         SeedFill_Start_DS = 1 # Start of seed filling growth
         DailyCarbonDemand_SeedFill = self.Switch_Function(self.Development_Stage-SeedFill_Start_DS, 0., TotalSeed_Carbons/self.Growth_Efficiency_Seed * Seed_GrowthRate) 
@@ -601,7 +661,7 @@ class Canopy:
 
 
     
-    def Calculate_Carbon_Partitioning(self, Nitrogen_determined_LAI, Carbon_determined_LAI, Root_Carbon_ChangeRateNew):
+    def Calculate_Carbon_Partitioning(self, Nitrogen_determined_LAI, Carbon_determined_LAI, nitrogen_determined_Root_Carbon):
         Fraction_Seed_Carbon = self.Carbon_Flow_to_Seed / self.DailyCarbon_Supply_Shoot
         Fraction_Stem_Carbon = self.Switch_Function(self.Development_Stage - (self.End_SeedFill_DS + 0.2),
                                                     self.Carbon_Flow_to_Stem / self.DailyCarbon_Supply_Shoot, 0)
@@ -612,15 +672,15 @@ class Canopy:
             Fraction_Leaf_Carbon = 0
 
         Fraction_Stem_CarbonReserve = 1.0 - Fraction_Leaf_Carbon - Fraction_Seed_Carbon - Fraction_Stem_Carbon  # Fraction of new shoot carbon to stem reserves
-        Fraction_Root_CarbonReserve = self.Switch_Function(Root_Carbon_ChangeRateNew - self.Root_Carbon, 1.0, 0.0)  # Fraction of new root carbon to root reserves
-    
+        Fraction_Root_CarbonReserve = self.Switch_Function(nitrogen_determined_Root_Carbon - self.Root_Carbon, 1.0, 0.0)  # Fraction of new root carbon to root reserves
+        # print(nitrogen_determined_Root_Carbon , self.Root_Carbon,)
         self.Fraction_Seed_Carbon = Fraction_Seed_Carbon
         self.Fraction_Stem_Carbon = Fraction_Stem_Carbon
         self.Fraction_Leaf_Carbon = Fraction_Leaf_Carbon
         self.Fraction_Stem_CarbonReserve = Fraction_Stem_CarbonReserve
         self.Fraction_Root_CarbonReserve = Fraction_Root_CarbonReserve
         
-        #print(  self.Carbon_Flow_to_Stem , self.DailyCarbon_Supply_Shoot, self.LAI_ChangeRate)
+        # print(nitrogen_determined_Root_Carbon , self.Root_Carbon)
         
         
         
@@ -639,7 +699,7 @@ class Canopy:
         self.Remobilized_Carbon_Root_to_Seed = Remobilized_Carbon_Root_to_Seed
         self.Stem_CarbonReserve_ChangeRate = Stem_CarbonReserve_ChangeRate
         self.Root_CarbonReserve_ChangeRate = Root_CarbonReserve_ChangeRate
-
+        # print(Remobilized_Carbon_Root_to_Seed)
         
     def Calculate_Carbon_Production_Rate(self, Root_carbon_loss_rate_senescence):
         Root_Carbon_ChangeRate = 12 / 44 * self.Photo_Assimilate * (1 - self.Fraction_Carbon_to_Shoot) * (1 - self.Fraction_Root_CarbonReserve) * self.Growth_Efficiency_Veg - Root_carbon_loss_rate_senescence
@@ -651,12 +711,12 @@ class Canopy:
         self.Stem_Carbon_ChangeRate = Stem_Carbon_ChangeRate
         self.Seed_Carbon_ChangeRate = Seed_Carbon_ChangeRate
         self.Leaf_Carbon_ChangeRate = Leaf_Carbon_ChangeRate
-        # print( self.Fraction_Leaf_Carbon )
+        # print( self.Development_Stage, self.Fraction_Carbon_to_Shoot, self.Fraction_Root_CarbonReserve,self.Growth_Efficiency_Veg)
 
 
     def Calculate_Biomass_Change_Rate(self):
         RootWeight_Rate = self.Root_Carbon_ChangeRate / self.CarbonFrac_Veg + self.Root_CarbonReserve_ChangeRate / 0.444
-        SeedWeight_Rate = self.Seed_Carbon_ChangeRate / self.CarbonFraction_Organs
+        SeedWeight_Rate = self.Seed_Carbon_ChangeRate / self.Carbon_Fraction_Seed
         LeafWeight_Rate = self.Leaf_Carbon_ChangeRate / self.CarbonFrac_Veg
         StemWeight_Rate = self.Stem_Carbon_ChangeRate / self.CarbonFrac_Veg + self.Stem_CarbonReserve_ChangeRate / 0.444
     
@@ -710,11 +770,18 @@ class Canopy:
         Nitrogen_Stem_ChangeRate = self.StemWeight_Rate * self.Switch_Function(-Nitrogen_Total_Available, self.Stem_Nitrogen, 0.)
     
     
+        # Expected N dynamics during seed (storage organ) filling
+       
+        Seed_Fill_N_Factor = self.Initial_N_Factor + (self.Final_N_Factor - self.Initial_N_Factor) * (4.0 - self.Developement_Stage_Max_N_dynamic - self.Development_Stage) / (2.0 - self.Developement_Stage_Max_N_dynamic) * (self.Development_Stage - 1.0) ** (1.0 / (2.0 - self.Developement_Stage_Max_N_dynamic))
+        Expected_Seed_N_Concentration = self.Limit_Function(self.Initial_N_Factor, self.Final_N_Factor, Seed_Fill_N_Factor) * Standard_SeedNitrogen_Conc
+
+    
         # Rate of N accumulation in seed
-        Nitrogen_Seed_Growth = Nitrogen_Shoot_New - Nitrogen_Stem_ChangeRate - Standard_SeedNitrogen_Conc * self.SeedWeight_Rate
-        Nitrogen_Organic_Compound_Conc = max(0., self.Switch_Function(Nitrogen_Total_Available + Nitrogen_Seed_Growth, (Nitrogen_Total_Available + Nitrogen_Shoot_New - Nitrogen_Stem_ChangeRate) / self.Avoid_Zero_Division(self.SeedWeight_Rate), Standard_SeedNitrogen_Conc))
+        Nitrogen_Seed_Growth = Nitrogen_Shoot_New - Nitrogen_Stem_ChangeRate - Expected_Seed_N_Concentration * self.SeedWeight_Rate
+
+        Nitrogen_Organic_Compound_Conc = max(0., self.Switch_Function(Nitrogen_Total_Available + Nitrogen_Seed_Growth, (Nitrogen_Total_Available + Nitrogen_Shoot_New - Nitrogen_Stem_ChangeRate) / self.Avoid_Zero_Division(self.SeedWeight_Rate), Expected_Seed_N_Concentration))
         Nitrogen_Seed_ChangeRate = self.SeedWeight_Rate * Nitrogen_Organic_Compound_Conc
-        #print(Nitrogen_Shoot_New , Nitrogen_Stem_ChangeRate , Standard_SeedNitrogen_Conc , self.SeedWeight_Rate)
+        # print(self.Development_Stage, Nitrogen_Seed_Growth-Nitrogen_Seed_Growth2)
         
         
         # Rate of N accumulation in leaf
@@ -728,7 +795,7 @@ class Canopy:
         Nitrogen_Root_Accumulation = self.Switch_Function(Nitrogen_Total_Available + Nitrogen_Seed_Growth, NitrogenUptake - Nitrogen_Shoot_New - Nitrogen_Root_Available - Root_nitrogen_loss_rate_senescence, NitrogenUptake - Nitrogen_Shoot_New - Nitrogen_Root_Available / self.Avoid_Zero_Division(Nitrogen_Total_Available) * (-Nitrogen_Seed_Growth) - Root_nitrogen_loss_rate_senescence)
         RootNitrogen_Growth = self.Switch_Function(Nitrogen_Seed_Growth, Nitrogen_Root_Accumulation, NitrogenUptake - Nitrogen_Shoot_New - Root_nitrogen_loss_rate_senescence)
         Nitrogen_Root_ChangeRate = max(-self.Nitrogen_Root + 5E-8, RootNitrogen_Growth)
-    
+        # print(Root_nitrogen_loss_rate_senescence)
         self.Nitrogen_Root_ChangeRate = Nitrogen_Root_ChangeRate
         self.Nitrogen_Stem_ChangeRate = Nitrogen_Stem_ChangeRate
         self.Nitrogen_Leaf_ChangeRate = Nitrogen_Leaf_ChangeRate
@@ -742,16 +809,16 @@ class Canopy:
     
 
     
-        # Rate of LAI driven by carbon supply
+        # Rate of LAI drivenc by carbon supply
         LAI_ChangeRate = self.Switch_Function(self.LeafWeight_Rate, max(-Carbon_determined_LAI + 1E-5, self.SLA_Const * self.LeafWeight_Rate), self.SLA_Const * self.LeafWeight_Rate)
-        # print(self.SLA_Const,Carbon_determined_LAI)
+        # LAI_ChangeRate = max(-Carbon_determined_LAI + 1E-5, self.SLA_Const * self.LeafWeight_Rate)
         # Adjusting LAI rate based on nitrogen during the juvenile phase
         if Carbon_determined_LAI < 1 and self.Development_Stage < 0.5:
             LAI_ChangeRate = (self.Specific_Leaf_N_Bottom * self.Nitrogen_Leaf_ChangeRate - self.Nitrogen_Leaf * Specific_Leaf_N_Bottom_ChangeRate) / self.Specific_Leaf_N_Bottom / (self.Specific_Leaf_N_Bottom + LeafNitrogen_ExtinctionCoefficient * self.Nitrogen_Leaf)
     
         self.LAI_ChangeRate = LAI_ChangeRate
         self.Specific_Leaf_N_Bottom_ChangeRate = Specific_Leaf_N_Bottom_ChangeRate
-        # print(LAI_ChangeRate,self.SLA_Const * self.LeafWeight_Rate)
+        # print( self.Development_Stage, self.LAI_ChangeRate, self.Leaf_Carbon_ChangeRate, self.Fraction_Leaf_Carbon)
 
     
     
@@ -868,7 +935,7 @@ class Canopy:
         self.CarbonDemand_Stem_PreviousTimeSteps += self.CarbonDemand_Stem_ChangeRate
 
         self.Specific_Leaf_N_Bottom += self.Specific_Leaf_N_Bottom_ChangeRate
-        self.Carbon_determined_LAI += self.LAI_ChangeRate
+        self.Carbon_determined_LAI += self.LAI_ChangeRate 
         
         
         self.Respiration_Uptakes += self.Respiration_Rate_Uptakes
