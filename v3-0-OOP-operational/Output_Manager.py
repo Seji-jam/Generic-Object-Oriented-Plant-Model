@@ -17,7 +17,7 @@ class OutputManager:
             f.write(data)
 
     def format_header(self, Soil_object):
-        base_header = "Year,doy,Development_Stage,LAI,Cumulative_Thermal_Unit,\
+        base_header = "Year,doy,Rain,Development_Stage,LAI,Cumulative_Thermal_Unit,\
 LiveRoot_Dry_Weight,Shoot_Dry_Weight,weight_roots_living,\
 Fraction_Leaf_Carbon,Leaf_Carbon,\
 Fraction_Seed_Carbon,Seed_Carbon,\
@@ -43,7 +43,7 @@ soil_moisture_root_zone,soil_moisture_below_root_zone"
         return base_header
 
     def format_data(self, day_data, Canopy_object, Leaf_object, Root_object, Soil_object):
-        base_data = f"{day_data['Year']},{day_data['Doy']},{float(Canopy_object.Development_Stage):.3f},{float(Leaf_object.Leaf_area_output['Leaf_Area_Index']):.4f},\
+        base_data = f"{day_data['Year']},{day_data['Doy']},{day_data['Rain']},{float(Canopy_object.Development_Stage):.3f},{float(Leaf_object.Leaf_area_output['Leaf_Area_Index']):.4f},\
 {float(Canopy_object.Cumulative_Thermal_Unit):.2f},\
 {float(Canopy_object.LiveRoot_Dry_Weight):.3f},{float(Canopy_object.Shoot_Dry_Weight):.3f},{float(Root_object.weight_roots_living):.3f},\
 {float(Canopy_object.Fraction_Leaf_Carbon):.3f},{float(Canopy_object.Leaf_Carbon):.3f},\
@@ -64,8 +64,8 @@ soil_moisture_root_zone,soil_moisture_below_root_zone"
         
         # Add soil moisture values for each layer
         # layer = Soil_object.Soil_Layer_Property['layers']
-        for layer in Soil_object.Soil_Layer_Property['layers']:
-            value=layer['Soil_Moisture']
+        for layer in Soil_object.layers:
+            value=layer['vwc']
             base_data += f",{value:.4f}"
         
         return base_data + "\n"

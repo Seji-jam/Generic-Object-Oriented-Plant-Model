@@ -78,7 +78,7 @@ class Canopy:
         self.Initial_Root_Carbon = self.Plant_Density * self.Seed_Weight * self.Carbon_Fraction_Seed * self.Germination_Efficiency * (1.0 - self.CarbonAlloc_Shoot)
         self.Initial_Leaf_N = self.IniLeafN_Conc * self.Initial_Leaf_Carbon / self.CarbonFrac_Veg
         self.Initial_Root_N = (self.Plant_Density * self.Seed_Weight * self.Germination_Efficiency * self.IniLeafN_Conc * self.CarbonAlloc_Shoot / self.NitrogenAlloc_Shoot) - self.Initial_Leaf_N
-        self.Initial_Plant_Height = self.MaxPlant_Height / 1000.0  # Converting to a different unit if necessary
+        self.Initial_Plant_Height = self.MaxPlant_Height / 1000.0  
         self.MinLeafN_Conc = self.SLA_Const * self.Min_Specific_Leaf_N
         self.Initial_LAI = self.Initial_Leaf_Carbon / self.CarbonFrac_Veg * self.SLA_Const
         self.Specific_Leaf_N_Bottom = self.Initial_Leaf_N / self.Initial_LAI
@@ -255,10 +255,16 @@ class Canopy:
             
          
       
-        
-        
-        
-        
+    def Update_Data(self,Actual_Canopy_Transpiration,
+                              Daily_Actual_Photosynthesis_Sunlit,Daily_Actual_Photosynthesis_Shaded,
+                              Daily_Actual_Photosynthesis_Sunlit_DELTA,Daily_Actual_Photosynthesis_Shaded_DELTA,
+                              Daily_Actual_Leaf_Temp_Sunlit,Daily_Actual_Leaf_Temp_Shaded):
+
+    
+            self.Actual_Canopy_Temp=(Daily_Actual_Leaf_Temp_Sunlit+Daily_Actual_Leaf_Temp_Shaded)/2
+            self.Actual_Canopy_Photosynthesis = (Daily_Actual_Photosynthesis_Sunlit + Daily_Actual_Photosynthesis_Shaded)/2
+            self.Actual_Canopy_Photosynthesis_DELTA=(Daily_Actual_Photosynthesis_Sunlit_DELTA+Daily_Actual_Photosynthesis_Shaded_DELTA)/2
+            self.Actual_Canopy_Transpiration=Actual_Canopy_Transpiration
 
     
     def Leaf_to_Canopy_Integration(self,hourly_data_list1,hourly_data_list2):
@@ -361,13 +367,13 @@ class Canopy:
                 raise ValueError ('Tr not converged')
             Leaf_shaded_object.Update_LeafTemp_Photosynthesis_if_WaterStress(water_supply_for_Transpiration,Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure,
                                                               Solar_Radiation, Max_Temp, Min_Temp, Vapour_Pressure, Wind_Speed, Plant_Height,
-                                                              average_root_zone_water_content,water_supply_for_evaporation, evaporation_depth, Root_Depth,
+                                                              average_root_zone_water_content,water_supply_for_evaporation, Root_Depth,
                                                               Hourly_Sunlit_Leaf_Temp, Hourly_Shaded_Leaf_Temp,
                                                               self.Actual_Canopy_Transpiration,Actual_Soil_Evaporation,Hourly_Soil_Evap,C3C4_Pathway)
 
             Leaf_sunlit_object.Update_LeafTemp_Photosynthesis_if_WaterStress(water_supply_for_Transpiration,Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure,
                                                               Solar_Radiation, Max_Temp, Min_Temp, Vapour_Pressure, Wind_Speed, Plant_Height, average_root_zone_water_content,
-                                                              water_supply_for_evaporation,evaporation_depth, Root_Depth,
+                                                              water_supply_for_evaporation, Root_Depth,
                                                               Hourly_Sunlit_Leaf_Temp, Hourly_Shaded_Leaf_Temp,
                                                               self.Actual_Canopy_Transpiration,Actual_Soil_Evaporation, Hourly_Soil_Evap,C3C4_Pathway)    
             self.Update_Canopy_Transpiration("A",Leaf_object.Hourly_Transpiration_Shaded,Leaf_object.Hourly_Transpiration_Sunlit,Day_Length)
@@ -375,6 +381,178 @@ class Canopy:
             # print(Water_Stress_Fraction)
         
    
+    
+    
+    # def Update_LeafTemp_Photosynthesis_if_WaterStress(self,Actual_Transpiration,Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure,
+    #                                                   Solar_Radiation, Max_Temp, Min_Temp, Vapour_Pressure, Wind_Speed, Plant_Height, average_root_zone_water_content,
+    #                                                   water_supply_for_evaporation, Root_Depth,
+    #                                                   Hourly_Sunlit_Leaf_Temp, Hourly_Shaded_Leaf_Temp,
+    #                                                   Potential_Canopy_Transpiration,Actual_Soil_Evaporation, Hourly_Soil_Evaporation,C3C4_Pathway,Potential_Canopy_Photosynthesis):
+          
+        
+        
+    #     # Constants
+    #     Latent_Heat_Vaporization = 2.4E6  # Latent heat of water vaporization (J/kg)
+    #     Volumetric_Heat_Capacity_Air = 1200  # Volumetric heat capacity (J/m3/°C)
+    #     Psychrometric_Constant = 0.067  # Psychrometric constant (kPa/°C)
+
+
+    #     Scattering_Coefficient_PAR = 0.2  # Leaf scattering coefficient for PAR
+    #     Scattering_Coefficient_NIR = 0.8  # Leaf scattering coefficient for NIR
+    #     Canopy_Diffuse_Reflection_Coefficient_PAR = 0.057  # Canopy diffuse PAR reflection coefficient
+    #     Canopy_Diffuse_Reflection_Coefficient_NIR = 0.389  # Canopy diffuse NIR reflection coefficient
+
+        
+        
+        
+        
+        
+        
+        
+    #     Average_Temp= (Max_Temp+ Min_Temp)/2
+    #     # Using updated attributes
+    #     Total_LAI = self.Leaf_object.Leaf_area_output['Total_LAI']
+    #     Leaf_Area_Index = self.Leaf_object.Leaf_area_output['Leaf_Area_Index']
+    #     Leaf_Nitrogen_Extinction_Coefficient = self.Leaf_object.Leaf_area_output['Leaf_Nitro_Ext_Coeff']
+    #     Wind_Ext_Coeff = self.Leaf_object.Leaf_area_output['Wind_Ext_Coeff']
+    #     Specific_Leaf_N_Top = self.Leaf_object.specific_Leaf_n_output['Specific_Leaf_N_Top']
+    #     Specific_Leaf_N_Top_Increment = self.Leaf_object.specific_Leaf_n_output['Specific_Leaf_N_Top_Increment']
+    
+
+
+
+    #     PAR = 0.5 * Solar_Radiation
+        
+    #     Atmospheric_Transmissivity = PAR / (0.5 * Solar_Constant * Sin_Solar_Declination)
+    #     Diffuse_Light_Fraction = max([
+    #         1 if Atmospheric_Transmissivity < 0.22 else
+    #         1 - 6.4 * (Atmospheric_Transmissivity - 0.22) ** 2 if Atmospheric_Transmissivity <= 0.35 else
+    #         1.47 - 1.66 * Atmospheric_Transmissivity,
+    #         0.15 + 0.85 * (1 - np.exp(-0.1 / Sin_Solar_Declination))
+    #     ])
+        
+    #     # Calculating direct and diffuse PAR based on atmospheric transmissivity
+    #     Diffuse_PAR = PAR * Diffuse_Light_Fraction
+    #     Direct_PAR = PAR - Diffuse_PAR
+        
+    #     # Adjusting for vapor pressure deficit's impact on intercellular CO2 concentration
+    #     Vapor_Pressure_Deficit_Response = 0.195127 if C3C4_Pathway == -1 else 0.116214  # Slope for linear effect of VPDL on Ci/Ca (VPDL: Air-to-Leaf vapour pressure deficit)
+        
+    #     # Extinction coefficients for sunlight penetration through the canopy
+    #     Leaf_Blade_Angle_Radians = self.Leaf_object.Leaf_Blade_Angle * np.pi / 180
+    #     Direct_Beam_Extinction_Coefficient = Leaf.KDR_Coeff(Sin_Solar_Declination, Leaf_Blade_Angle_Radians)
+        
+    #     # Scattering coefficient for PAR and adjustments for Leaf and canopy level interactions
+      
+    #     Diffuse_Extinction_Coefficient_PAR = Leaf.KDF_Coeff(Total_LAI, Leaf_Blade_Angle_Radians, Scattering_Coefficient_PAR)
+    #     Scattered_Beam_Extinction_Coefficient_PAR, Canopy_Beam_Reflection_Coefficient_PAR = Leaf.REFLECTION_Coeff(Scattering_Coefficient_PAR, Direct_Beam_Extinction_Coefficient)
+        
+      
+        
+    #     # Calculating boundary layer resistance to heat and water vapor for sunlit leaves
+    #     Boundary_Layer_Conductance_Heat=(0.01 * np.sqrt(Wind_Speed / self.Leaf_object.Leaf_Width))
+    #     Canopy_Boundary_Layer_Conductance_Heat = Boundary_Layer_Conductance_Heat*(1 - np.exp(-0.5 * Wind_Ext_Coeff * Leaf_Area_Index)) / (0.5 * Wind_Ext_Coeff)
+
+    #     Canopy_Boundary_Layer_Resistance_Heat = 1. / Canopy_Boundary_Layer_Conductance_Heat
+    #     Canopy_Boundary_Layer_Resistance_Water = 0.93 * Canopy_Boundary_Layer_Resistance_Heat
+      
+        
+        
+    #     # Adjusting turbulence resistance for the canopy
+    #     Turbulence_Resistance = 0.74 * (np.log((2 - 0.7 * Plant_Height) / (0.1 * Plant_Height))) ** 2 / (0.4 ** 2 * Wind_Speed)
+        
+    #     # Calculating Leaf temperature adjustments due to water stress
+    #     Temperature_Difference =  (self.Daily_Absorbed_Radiation_Sunlit - Latent_Heat_Vaporization * Actual_Transpiration_Sunlit) * (Canopy_Boundary_Layer_Resistance_Heat + Turbulence_Resistance) / Volumetric_Heat_Capacity_Air
+    #     Temperature_Difference=max(-25, min(Temperature_Difference, 25)) 
+      
+    #     Adjusted_Leaf_Temperature = Average_Temp + Temperature_Difference
+                    
+    #     # Adjusting stomatal resistance to water under water stress conditions
+    #     Adjusted_Stomatal_Resistance_Water = (self.Daily_Potential_Transpiration - Actual_Transpiration_Sunlit) * (self.Daily_Slope_VPD * (Canopy_Boundary_Layer_Resistance_Heat + Turbulence_Resistance) + Psychrometric_Constant * (Canopy_Boundary_Layer_Resistance_Water + Turbulence_Resistance)) / Actual_Transpiration_Sunlit / Psychrometric_Constant + self.Daily_Potential_Transpiration / Actual_Transpiration_Sunlit * self.Daily_Stomatal_Resistance_Water
+    #     # print(897,Transpiration_Sunlit- Actual_Transpiration_Sunlit,
+    #     #       Stomatal_Resistance_Water_Sunlit-Adjusted_Stomatal_Resistance_Water,Adjusted_Leaf_Temperature)
+      
+        
+    #     # if round(Transpiration_Sunlit,4) != round(Actual_Transpiration_Sunlit,4):
+    #     #     raise  RuntimeError("Error")
+        
+        
+    #     # Absorbed PAR calculation for sunlit leaves
+    #     Absorbed_PAR, _ = Leaf.LIGHT_ABSORB(Scattering_Coefficient_PAR, Direct_Beam_Extinction_Coefficient, Scattered_Beam_Extinction_Coefficient_PAR, Diffuse_Extinction_Coefficient_PAR, Canopy_Beam_Reflection_Coefficient_PAR, Canopy_Diffuse_Reflection_Coefficient_PAR, Direct_PAR, Diffuse_PAR, Leaf_Area_Index)
+      
+    #     # print(891,"PARRR" ,Absorbed_PAR_Sunlit)
+      
+    #     # Adjusting photosynthetic nitrogen for sunlit parts of the canopy
+    #     Photosynthetic_Nitrogen_Sunlit = Specific_Leaf_N_Top * (1. - np.exp(-(Leaf_Nitrogen_Extinction_Coefficient + Direct_Beam_Extinction_Coefficient) * Leaf_Area_Index)) / (Leaf_Nitrogen_Extinction_Coefficient + Direct_Beam_Extinction_Coefficient) - self.Leaf_object.Min_Specific_Leaf_N * (1. - np.exp(-Direct_Beam_Extinction_Coefficient * Leaf_Area_Index)) / Direct_Beam_Extinction_Coefficient
+    #     Photosynthetic_Nitrogen_Sunlit_DELTA = Specific_Leaf_N_Top_Increment * (1. - np.exp(-(Leaf_Nitrogen_Extinction_Coefficient + Direct_Beam_Extinction_Coefficient) * Leaf_Area_Index)) / (Leaf_Nitrogen_Extinction_Coefficient + Direct_Beam_Extinction_Coefficient) - self.Leaf_object.Min_Specific_Leaf_N * (1. - np.exp(-Direct_Beam_Extinction_Coefficient * Leaf_Area_Index)) / Direct_Beam_Extinction_Coefficient
+      
+    #     # Calculating internal CO2 and photosynthesis adjustments
+    #     Sat_Vapor_Pressure_Leaf, Intercellular_CO2_Leaf = Leaf.INTERNAL_CO2(Adjusted_Leaf_Temperature, Vapour_Pressure, Vapor_Pressure_Deficit_Response, self.Leaf_object.Ambient_CO2, self.Leaf_object.C3C4_Pathway)
+        
+    #     Actual_Photosynthesis_Rate, Dark_Respiration_Rate = Leaf.PHOTOSYN(self.Leaf_object.C3C4_Pathway, Absorbed_PAR_Sunlit, Adjusted_Leaf_Temperature, Intercellular_CO2_Leaf, Photosynthetic_Nitrogen_Sunlit, self.Leaf_object.Activation_Energy_Jmax, self.Leaf_object.Vcmax_LeafN_Slope, self.Leaf_object.Jmax_LeafN_Slope, self.Leaf_object.Photosynthetic_Light_Response_Factor)
+    #     # print(892,'rate',Actual_Photosynthesis_Rate)
+    #     Actual_Photosynthesis_Rate_DELTA, Dark_Respiration_Rate_DELTA = Leaf.PHOTOSYN(self.Leaf_object.C3C4_Pathway, Absorbed_PAR_Sunlit, Adjusted_Leaf_Temperature, Intercellular_CO2_Leaf, Photosynthetic_Nitrogen_Sunlit_DELTA, self.Leaf_object.Activation_Energy_Jmax, self.Leaf_object.Vcmax_LeafN_Slope, self.Leaf_object.Jmax_LeafN_Slope, self.Leaf_object.Photosynthetic_Light_Response_Factor)
+      
+    #     # Actual photosynthesis under water stress condition
+    #     Actual_Photosynthesis = (1.6 * self.Daily_Stomatal_Resistance_Water_Sunlit + 1.3 * Boundary_Layer_Resistance_Water_Sunlit + Turbulence_Resistance_Sunlit) / (1.6 * Adjusted_Stomatal_Resistance_Water + 1.3 * Boundary_Layer_Resistance_Water_Sunlit + Turbulence_Resistance_Sunlit) * (Actual_Photosynthesis_Rate - Dark_Respiration_Rate) + Dark_Respiration_Rate
+    #     # print(898,'actual',Actual_Photosynthesis,Actual_Photosynthesis_Rate,Potential_Canopy_Photosynthesis)
+    #     # if round(self.Leaf_object.Hourly_Photosynthesis_Sunlit[i],4) < round(Actual_Photosynthesis_Rate,4):
+    #     #     raise  RuntimeError()
+      
+    #     Actual_Photosynthesis_DELTA = (1.6 * self.Daily_Stomatal_Resistance_Water_Sunlit + 1.3 * Boundary_Layer_Resistance_Water_Sunlit + Turbulence_Resistance_Sunlit) / (1.6 * Adjusted_Stomatal_Resistance_Water + 1.3 * Boundary_Layer_Resistance_Water_Sunlit + Turbulence_Resistance_Sunlit) * (Actual_Photosynthesis_Rate_DELTA - Dark_Respiration_Rate_DELTA) + Dark_Respiration_Rate_DELTA
+    #     # print(Actual_Photosynthesis_DELTA,Actual_Photosynthesis)
+    #     # Appending results for analysis
+    #     Actual_Photosynthesis_list.append(Actual_Photosynthesis)
+    #     Actual_Photosynthesis_DELTA_list.append(Actual_Photosynthesis_DELTA)
+    #     #print(Actual_Photosynthesis_DELTA_list)
+    #     Actual_Transpiration_list.append(Actual_Transpiration_Sunlit)
+    #     Actual_Air_Leaf_Temperature_Difference_list.append(Temperature_Difference)
+    #     Actual_Leaf_Temperature_list.append(Adjusted_Leaf_Temperature)
+          
+    
+    
+       
+    
+   
+    
+   
+    
+   
+    
+   
+    
+   
+    
+   
+    
+   
+    
+   
+    
+   
+    
+   
+    
+   
+    
+   
+    
+   
+    
+   
+    
+   
+    
+   
+    
+   
+    
+   
+    
+   
+    
+   
+    
 
     def calculate_thermal_units(self, Development_Stage, Tmax, Tmin, DayLength, BTemp_Phen, OTemp_Phen, CTemp_Phen, TempCurve_Res):
         
@@ -395,6 +573,7 @@ class Canopy:
     
             # Assuming development rate at supra-optimum temperatures during the reproductive
             # phase equals that at the optimum temperature
+            # print(TempHourly)
             if Development_Stage > 1:
                 TempHourly = min(TempHourly, OTemp_Phen)
                 
@@ -404,11 +583,15 @@ class Canopy:
                 ThermalUnit = 0
             else:
                 ThermalUnit = (((CTemp_Phen - TempHourly) / (CTemp_Phen - OTemp_Phen)) * ((TempHourly - BTemp_Phen) / (OTemp_Phen - BTemp_Phen)) ** ((OTemp_Phen - BTemp_Phen) / (CTemp_Phen - OTemp_Phen))) ** TempCurve_Res
+                # ThermalUnit = (TempHourly - BTemp_Phen) / (OTemp_Phen - BTemp_Phen)
             TotalThermalUnits += ThermalUnit / 24
-
+        # if Tmean < BTemp_Phen or Tmean > CTemp_Phen:
+        #     TotalThermalUnits = 0
+        # else:
+        #     TotalThermalUnits = (Tmean - BTemp_Phen)
         # Daily thermal unit
         self.Daily_Thermal_Unit = TotalThermalUnits
-        #print(TotalThermalUnits)
+        # print(self.Daily_Thermal_Unit)
         
     
 
@@ -433,9 +616,13 @@ class Canopy:
             DevelopmentRate = 1 / MinThermal_Day_Veg * Daily_Thermal_Unit * EffectPhotoperiod
         else:
             DevelopmentRate = 1 / MinThermal_Day_Rep * Daily_Thermal_Unit
-    
+            # print(DevelopmentRate)
+        # if 0 <= Development_Stage < 1.0:
+        #     DevelopmentRate = (1 / MinThermal_Day_Veg) * Daily_Thermal_Unit * EffectPhotoperiod
+        # else:
+        #     DevelopmentRate = (1 / MinThermal_Day_Rep) * Daily_Thermal_Unit
+        #     # print(DevelopmentRate)
         self.DevelopmentRate = DevelopmentRate
-        # print(DevelopmentRate)
 
 
 
@@ -576,6 +763,9 @@ class Canopy:
         LeafWeight_Loss_Intermediate_varialble = (Carbon_determined_LAI - min(Carbon_determined_LAI, Nitrogen_determined_LAI)) / self.SLA_Const / self.Model_TimeStep
         LeafWeight_Loss_ChangeRate = min(self.LiveLeaf_Dry_Weight - 1.e-5, LeafWeight_Loss_Intermediate_varialble + self.REANOR_Function(self.End_SeedFill_DS - self.Development_Stage, LeafWeight_Loss_Intermediate_varialble) * 0.03 * self.LiveLeaf_Dry_Weight)
         Leaf_Nitrogen_Loss_ChangeRate = min(LeafWeight_Loss_ChangeRate, LeafWeight_Loss_Intermediate_varialble) * self.MinLeafN_Conc + (LeafWeight_Loss_ChangeRate - min(LeafWeight_Loss_ChangeRate, LeafWeight_Loss_Intermediate_varialble)) * self.Nitrogen_Leaf 
+        # print(766,Carbon_determined_LAI, self.REANOR_Function(self.End_SeedFill_DS - self.Development_Stage, LeafWeight_Loss_Intermediate_varialble),)
+
+        
         Leaf_Carbon_Loss_ChangeRate = LeafWeight_Loss_ChangeRate * self.CarbonFrac_Veg
         
         self.Leaf_Nitrogen_Loss_ChangeRate = Leaf_Nitrogen_Loss_ChangeRate
@@ -645,6 +835,7 @@ class Canopy:
                     
         # Daily carbon flow for structural stem growth
         Plant_Height_ChangeRate = min(self.MaxPlant_Height - self.Plant_Height, PlantHeight_Growth_Rate * self.MaxPlant_Height * IntegralFactor_Stress_Height)  # Rate of plant height growth
+        # print( self.Plant_Height,PlantHeight_Growth_Rate , IntegralFactor_Stress_Height)
         CarbonDemand_Stem_ChangeRate = (DailyCarbonDemand_StemGrowth - self.CarbonDemand_Stem_PreviousTimeSteps) / self.Model_TimeStep  # Carbon demand for structural stem growth at the previous time step
         
         self.DailyCarbon_Supply_Stem = DailyCarbon_Supply_Stem
@@ -702,7 +893,7 @@ class Canopy:
         # print(Remobilized_Carbon_Root_to_Seed)
         
     def Calculate_Carbon_Production_Rate(self, Root_carbon_loss_rate_senescence):
-        Root_Carbon_ChangeRate = 12 / 44 * self.Photo_Assimilate * (1 - self.Fraction_Carbon_to_Shoot) * (1 - self.Fraction_Root_CarbonReserve) * self.Growth_Efficiency_Veg - Root_carbon_loss_rate_senescence
+        Root_Carbon_ChangeRate = 12.0 / 44.0 * self.Photo_Assimilate * (1 - self.Fraction_Carbon_to_Shoot) * (1 - self.Fraction_Root_CarbonReserve) * self.Growth_Efficiency_Veg - Root_carbon_loss_rate_senescence
         Stem_Carbon_ChangeRate = 12.0 / 44.0 * self.Photo_Assimilate * self.Fraction_Carbon_to_Shoot * self.Fraction_Stem_Carbon * self.Growth_Efficiency_Veg
         Seed_Carbon_ChangeRate = 12.0 / 44.0 * self.Photo_Assimilate * self.Fraction_Carbon_to_Shoot * self.Fraction_Seed_Carbon * self.Growth_Efficiency_Seed + 0.94 * (self.Remobilized_Carbon_Stem_to_Seed + self.Remobilized_Carbon_Root_to_Seed) * self.Growth_Efficiency_Seed
         Leaf_Carbon_ChangeRate = 12.0 / 44.0 * self.Photo_Assimilate * self.Fraction_Carbon_to_Shoot * self.Fraction_Leaf_Carbon * self.Growth_Efficiency_Veg - self.Leaf_Carbon_Loss_ChangeRate
@@ -788,6 +979,7 @@ class Canopy:
         Nitrogen_Leaf_Accumulation = self.Switch_Function(Nitrogen_Total_Available + Nitrogen_Seed_Growth, -Nitrogen_Leaf_Available - self.Leaf_Nitrogen_Loss_ChangeRate, -Nitrogen_Leaf_Available / self.Avoid_Zero_Division(Nitrogen_Total_Available) * (-Nitrogen_Seed_Growth) - self.Leaf_Nitrogen_Loss_ChangeRate)
         LeafNitrogen_Growth = self.Switch_Function(Nitrogen_Seed_Growth, Nitrogen_Leaf_Accumulation, Nitrogen_Shoot_New - Nitrogen_Stem_ChangeRate - Nitrogen_Seed_ChangeRate - self.Leaf_Nitrogen_Loss_ChangeRate)
         Nitrogen_Leaf_ChangeRate = max(-self.Nitrogen_Leaf + 1E-7, LeafNitrogen_Growth)
+        # print("Nitrogen_Leaf_ChangeRate", LeafNitrogen_Growth, -Nitrogen_Leaf_Available , self.Leaf_Nitrogen_Loss_ChangeRate)
         Nitrogen_Leaf_ChangeRate_Positive = max(0, Nitrogen_Leaf_ChangeRate)
         #print(-Nitrogen_Leaf_Available ,Nitrogen_Total_Available,-Nitrogen_Seed_Growth, self.Leaf_Nitrogen_Loss_ChangeRate)
 
@@ -815,7 +1007,7 @@ class Canopy:
         # Adjusting LAI rate based on nitrogen during the juvenile phase
         if Carbon_determined_LAI < 1 and self.Development_Stage < 0.5:
             LAI_ChangeRate = (self.Specific_Leaf_N_Bottom * self.Nitrogen_Leaf_ChangeRate - self.Nitrogen_Leaf * Specific_Leaf_N_Bottom_ChangeRate) / self.Specific_Leaf_N_Bottom / (self.Specific_Leaf_N_Bottom + LeafNitrogen_ExtinctionCoefficient * self.Nitrogen_Leaf)
-    
+
         self.LAI_ChangeRate = LAI_ChangeRate
         self.Specific_Leaf_N_Bottom_ChangeRate = Specific_Leaf_N_Bottom_ChangeRate
         # print( self.Development_Stage, self.LAI_ChangeRate, self.Leaf_Carbon_ChangeRate, self.Fraction_Leaf_Carbon)

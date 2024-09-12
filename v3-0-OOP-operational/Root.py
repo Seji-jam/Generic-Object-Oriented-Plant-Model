@@ -3,7 +3,7 @@ import numpy as np
 
 
 class Root:
-    def __init__(self,  Critical_root_weight_density, max_root_depth, Model_TimeStep):
+    def __init__(self, Soil_Layer_Property,Critical_root_weight_density, max_root_depth, Model_TimeStep):
         self.Critical_root_weight_density = Critical_root_weight_density
         self.max_root_depth = max_root_depth
         self.Model_TimeStep = Model_TimeStep
@@ -12,8 +12,8 @@ class Root:
         self.weight_roots_living = 0
         self.Root_nitrogen_loss_rate_senescence = 0
         self.carbon_dead_roots = 0
-        root_depth_initial = 10
-        self.Root_Depth = root_depth_initial
+        root_depth_ini = Soil_Layer_Property['rootdepth']*100 #cm
+        self.Root_Depth = root_depth_ini
 
         
     def Switch_Function(self,x, y1, y2):
@@ -42,7 +42,7 @@ class Root:
     def Calculate_Rooting_Depth(self, RootWeight_Rate, LiveRoot_Dry_Weight, DeadRoot_Dry_Weight):
         extinction_coefficient = -np.log(0.05) / self.max_root_depth
         root_depth_growth_rate = self.Switch_Function(self.Root_Depth - self.max_root_depth, min((self.max_root_depth - self.Root_Depth) / self.Model_TimeStep, (RootWeight_Rate + self.weight_roots_living) / (self.Critical_root_weight_density + extinction_coefficient * (LiveRoot_Dry_Weight + DeadRoot_Dry_Weight))), 0)
-        self.root_depth_growth_rate = root_depth_growth_rate
+        self.root_depth_growth_rate = root_depth_growth_rate 
         # print(root_depth_growth_rate)
     def Update_State_Variables(self):
         self.carbon_dead_roots += self.Root_carbon_loss_rate_senescence 

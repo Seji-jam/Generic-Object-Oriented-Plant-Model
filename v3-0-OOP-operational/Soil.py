@@ -9,14 +9,65 @@ wgauss = np.array([0.1184635, 0.2393144, 0.2844444, 0.2393144, 0.1184635])
                 
 Latent_Heat_of_Water_Vaporization = 2.4E6  # Latent heat of vaporization (J/kg)
 Volumetric_Heat_Capacity_Air = 1200  # Volumetric heat capacity of air (J/m^3/°C)
+
+import json
+import math
+from collections import namedtuple
+# Soil water characteristics.
+SWC = namedtuple('SWC', 'sat fc pwp psd porosity airentry')
+
+# Soil texture.
+Texture = namedtuple('Texture', ['clay', 'sand', 'om'])
+
+# Soil water characteristics in the rooting zone.
+RootZone = namedtuple('RootZone', 'wc vwc Root_Zone_Plant_Avail sat fc pwp Evaporative_layer_water_content')
+
+# Actual evapotranspiration (ET).
+ActualET = namedtuple('ActualET', 'crop soil')
+
+# Water fluxes into a given soil layer.
+Fluxes = namedtuple('Fluxes', 't e influx outflux netflux')
+
 class Soil:
-    def __init__(self,Soil_Layer_Property, planting_depth, num_intervals, number_of_layers):
         
-        self.Soil_Layer_Property=Soil_Layer_Property
-        # self.Residual_Soil_Moisture = self.soil_parameters['Residual_Soil_Moisture']
-        # self.Saturated_Soil_Moisture= self.soil_parameters['Saturated_Soil_Moisture']
-        # self.field_capacity_water_content = self.soil_parameters['Field_Capacity']  # Water content at field capacity
+    __accdepth = 0.0    # internal use: used to determine a layer's depth
+    
+    def __init__(self, Soil_Layer_Property):
+        self.num_intervals = Soil_Layer_Property['num_intervals']
+        self.planting_depth = Soil_Layer_Property['planting_depth']
+        self.rootdepth = Soil_Layer_Property['rootdepth']
+        self.has_watertable = Soil_Layer_Property['has_watertable']
+        self.number_of_layers = Soil_Layer_Property['number_of_layers']
+        self.layers = []
+   
+        layers = Soil_Layer_Property['layers']
+        self.alpha= Soil_Layer_Property['alpha']
+        self.layer_depths = [layer['thick'] * 100 for layer in Soil_Layer_Property['layers']]  # Convert thickness to cm
+
         
+        
+        for i in range(self.number_of_layers):
+            layer = self._create_layer(layers[i])
+            self.layers.append(layer)
+   
+        for i in range(self.number_of_layers):
+            prevlayer = self.layers[i - 1] if i > 0 else None
+            nextlayer = self.layers[i + 1] if i < self.number_of_layers - 1 else None
+            self._initialize_layer(self.layers[i], prevlayer, nextlayer)
+   
+        self.__pf = [{field: 0.0 for field in Fluxes._fields} for _ in range(self.number_of_layers)]
+        self.__prz = {field: 0.0 for field in RootZone._fields}
+        self._rootzone_water()
+        self.rootwater = RootZone(*[0.0] * len(RootZone._fields))
+        self.netrain = 0.0
+        # self.Evaporative_Depth=Soil_Layer_Property['layers'][0]['thick']
+        self.Evaporative_Depth=Soil_Layer_Property['Evaporative_Depth']
+        self.clay_percentage = 12.0  # Clay content in soil
+        self.soil_moisure_evaporative_layer = layers[0]['vwc']
+
+        root_depth_ini = Soil_Layer_Property['rootdepth']*100 #cm
+
+
         
         total_water_FC_profile=0
         total_water_S_profile=0
@@ -24,23 +75,19 @@ class Soil:
         total_depth=0
         for j, layer in enumerate(Soil_Layer_Property['layers']):
 
-            total_depth+=layer['Layer_Thickness']
+            total_depth+=layer['thick']
 
-            total_water_FC_profile+=layer['Field_Capacity_']*layer['Layer_Thickness']
+            total_water_FC_profile+=layer['ThetaFC']*layer['thick']
             self.Field_Capacity_soil_profile=total_water_FC_profile/total_depth
 
-            total_water_S_profile+=layer['Saturated_Soil_Moisture']*layer['Layer_Thickness']
+            total_water_S_profile+=layer['ThetaS']*layer['thick']
             self.Saturated_Soil_Moisture_soil_profile=total_water_S_profile/total_depth
             
-            total_water_PWP_profile+=layer['Permanent_Wilting_Point']*layer['Layer_Thickness']
+            total_water_PWP_profile+=layer['ThetaPWP']*layer['thick']
             self.Permanent_Wilting_Point_soil_profile=total_water_PWP_profile/total_depth
         self.total_depth=total_depth
-        self.clay_percentage = 23.4  # Clay content in soil
 
-        self.Evaporative_Depth=Soil_Layer_Property['layers'][0]['Layer_Thickness']
-        self.planting_depth=planting_depth
-        self.num_intervals=num_intervals
-        self.number_of_layers=number_of_layers
+
 
         self.temperature_change_constant = 1
         self.temperature_change_T = 4
@@ -87,10 +134,6 @@ class Soil:
         self.nitrogen_uptake = 0  # Nitrogen uptake rate
 
 
-        # self.hourly_Soil_Evap=[]
-        self.hourly_Soil_Rad=[]
-        self.Hourly_Actual_Soil_Evap=[]
-
         # # Irrigation and fertilization can be input in the weather file as well! 
         # # Irrigation schedule: Days and corresponding irrigation amount (currently set to 0)
         # self.irrigation_schedule = [(5.0, 0), (15.0, 0), (25.0, 0), (35.0, 0), (45.0, 0), 
@@ -115,7 +158,6 @@ class Soil:
 
 
         # Initial conditions and parameter calculations
-        root_depth_ini = 5 #cm
         Microbial_Biomass_initial_content =  self.Microbial_Biomass_conversion_fraction *  self.total_organic_carbon
         # soil_moisture_initial =  self.field_capacity_water_content *  self.parameter_adjustment_multiplier
        
@@ -174,7 +216,7 @@ class Soil:
         self.resistant_plant_nitrogen = resistant_plant_nitrogen_initial   
         # self.water_upper_soil = water_upper_soil_initial 
         # self.water_lower_soil = water_lower_soil_initial 
-        # Root_Depth = root_depth_ini  
+
         self.Soil_Temperature =  self.initial_soil_temp 
         self.ammonium_upper_layer = ammonium_upper_layer_initial
         self.nitrate_upper_layer = nitrate_upper_layer_initial
@@ -182,11 +224,17 @@ class Soil:
         self.ammonium_lower_layer = ammonium_lower_layer_initial
         self.total_nitrogen_leached = 0
         self.N_volatilization = 0
-        self.soil_moisure_evaporative_layer = 0
 
         self.potential_SoilRad_daily = 0
         self.Day_Air_Soil_temp_dif  = 0
         self.Actual_Daily_Evaporation =0
+        
+        # self.hourly_Soil_Evap=[]
+        self.hourly_Soil_Rad=[]
+        self.Hourly_Actual_Soil_Evap=[]
+        self.potential_evaporation=0
+        self.Actual_Daily_Transpiration=0
+        
         self.hourly_rbhs=[]
         self.hourly_rts=[]
 
@@ -213,347 +261,340 @@ class Soil:
         else:
             return y3
 
-    def van_genuchten(self,soil_moisture, alpha, n, Residual_Soil_Moisture, Saturated_Soil_Moisture):
-        m = 1 - 1 / n
-        effective_saturation = (soil_moisture - Residual_Soil_Moisture) / (Saturated_Soil_Moisture - Residual_Soil_Moisture)
-        effective_saturation = np.clip(effective_saturation, 0.0001, 1)  # prevent division by zero
-        pressure_head = ((effective_saturation**(-1/m) - 1)**(1/n)) / alpha
-        return pressure_head
+
+
+    def _create_layer(self, layer_data):
+        layer = {
+            'thick': layer_data['thick'],
+            'texture': Texture(layer_data['texture']['clay'], layer_data['texture']['sand'], layer_data['texture']['om']),
+            'vwc': layer_data['vwc'],
+            'wc': layer_data['vwc'] * layer_data['thick'] * 1000,
+            'ThetaS': layer_data['ThetaS'],
+            'ThetaFC': layer_data['ThetaFC'],
+            'ThetaPWP': layer_data['ThetaPWP'],
+            'ksat': layer_data['KSAT'],
+            'Pore_Size_Distribution': layer_data['Pore_Size_Distribution'],
+            'PORS': layer_data['PORS'],
+            'swc': SWC(layer_data['ThetaS'], layer_data['ThetaFC'], layer_data['ThetaPWP'], 
+                       layer_data['Pore_Size_Distribution'], layer_data['PORS'], 5.0),
+            'accthick': 0.0,
+            'depth': 0.0,
+            'matric': 0.0,
+            'gravity': 0.0,
+            'fluxes': Fluxes(0.0, 0.0, 0.0, 0.0, 0.0),
+            'prev': None,
+            'next': None
+        }
+        return layer
+
+    def _initialize_layer(self, layer, prevlayer, nextlayer):
+        layer['prev'] = prevlayer
+        layer['next'] = nextlayer
+
+        prevaccthick = prevlayer['accthick'] if prevlayer else 0.0
+        layer['accthick'] = layer['thick'] + prevaccthick
+        prevthick = prevlayer['thick'] if prevlayer else 0.0
+        d = 0.5 * (prevthick + layer['thick'])
+        layer['depth'] = Soil.__accdepth + d
+        Soil.__accdepth += d
+
+
+        c, s, om = layer['texture']
+        s /= 100
+        c /= 100
+        
+        
+        awc = layer['ThetaS'] - layer['ThetaFC']
+        n1 = -21.674 * s - 27.932 * c - 81.975 * awc + 71.121 * (s * awc)
+        n2 = 8.294 * (c * awc) + 14.05 * (s * c) + 27.161
+        aet = n1 + n2
+        ae = max(0.0, aet + (0.02 * aet ** 2 - 0.113 * aet - 0.7))
     
-    def hydraulic_conductivity(self,soil_moisture, Saturated_Hydraulic_Conductivity, alpha, n, Residual_Soil_Moisture, Saturated_Soil_Moisture):
-        m = 1 - 1 / n
-        effective_saturation = (soil_moisture - Residual_Soil_Moisture) / (Saturated_Soil_Moisture - Residual_Soil_Moisture)
-        effective_saturation = np.clip(effective_saturation, 0.0001, 1)  # prevent division by zero
-        conductivity = Saturated_Hydraulic_Conductivity * (effective_saturation**0.5) * (1 - (1 - effective_saturation**(1/m))**m)**2
-        return conductivity
- 
-    # def Calculate_Soil_Water_Content(self,irrigation_amount,Root_Depth):
 
-    #     number_of_layers = self.soil_parameters['number_of_soil_layers']   # number of soil layers
-    #     layer_depth = self.soil_parameters['layer_depth']  # depth of each soil layer in cm
-    #     # time_step = 1.0  # time step in days
+        layer['swc'] = SWC(layer['ThetaS'], layer['ThetaFC'], layer['ThetaPWP'], 
+                           layer['Pore_Size_Distribution'], layer['PORS'], ae)
 
-    #     # # Soil parameters (Van Genuchten parameters)
-    #     # alpha = self.soil_parameters['alpha']  # (1/cm)
-    #     # n = self.soil_parameters['n']
-    #     Residual_Soil_Moisture = self.soil_parameters['Residual_Soil_Moisture']  # residual soil moisture
-    #     Saturated_Soil_Moisture = self.soil_parameters['Saturated_Soil_Moisture']   # saturated soil moisture
-    #     # Saturated_Hydraulic_Conductivity = self.soil_parameters['Saturated_Hydraulic_Conductivity']  # saturated hydraulic conductivity (cm/day)
-
-
-    #     # # Irrigation and evapotranspiration rates (cm/day)
-    #     # irrigation_rate =irrigation_amount  # cm/day (only applied to the top layer)
-   
         
-    #     # # Initialize soil moisture array
-    #     soil_moisture = np.zeros((1, number_of_layers))
-    #     soil_moisture[0, :] = np.full( number_of_layers,self.soil_parameters['current_soil_moisture'])
+        if layer['vwc'] < 0:
+            vwc = -layer['vwc']
+            fc = layer['swc'].fc
+            if 1 <= vwc <= 2:
+                sat = layer['swc'].sat
+                vwc = sat - (vwc - 1) * (sat - fc)
+            elif 2 < vwc <= 3:
+                pwp = layer['swc'].pwp
+                vwc = fc - (vwc - 2) * (fc - pwp)
+            else:
+                vwc = fc
+            layer['vwc'] = vwc
+            layer['wc'] = layer['vwc'] * layer['thick'] * 1000
 
-    #     # timesteps=2
-    #     # # Richards equation solver
-    #     # for t in range(1, timesteps):
-    #     #     conductivity = np.zeros(number_of_layers)
-    #     #     pressure_head = np.zeros(number_of_layers)
-    #     #     for z in range(number_of_layers):
-    #     #         conductivity[z] = self.hydraulic_conductivity(soil_moisture[t-1, z], Saturated_Hydraulic_Conductivity, alpha, n, Residual_Soil_Moisture, Saturated_Soil_Moisture)
-    #     #         pressure_head[z] = self.van_genuchten(soil_moisture[t-1, z], alpha, n, Residual_Soil_Moisture, Saturated_Soil_Moisture)
-            
-    #     #     # Calculate fluxes
-    #     #     flux = np.zeros(number_of_layers + 1)
-    #     #     flux[0] = irrigation_rate  # Irrigation at the surface
-    #     #     for z in range(1, number_of_layers):
-    #     #         flux[z] = -conductivity[z-1] * (pressure_head[z-1] - pressure_head[z]) / layer_depth
-    #     #     flux[number_of_layers] = conductivity[number_of_layers-1] * (pressure_head[number_of_layers-1] - 0) / layer_depth  # Free drainage at the bottom
-            
-    #     #     # Update soil moisture
-    #     #     for z in range(number_of_layers):
-    #     #         soil_moisture[t, z] = soil_moisture[t-1, z] + (time_step / layer_depth) * (flux[z] - flux[z+1])
+        self._update_heads_k(layer)
 
-            
-    #     #     # Apply boundary conditions
-    #     #     soil_moisture[t, :] = np.clip(soil_moisture[t, :], Residual_Soil_Moisture, Saturated_Soil_Moisture)
-    #     # # self.soil_parameters['current_soil_moisture']=soil_moisture[-1, :]
+    def _update_heads_k(self, layer):
+        fc = layer['swc'].fc
+        vwc = layer['vwc']
+        if vwc >= fc:
+            df = vwc - fc
+            hm = 33 - (33 - layer['swc'].airentry) * df / (layer['swc'].sat - fc)
+            hm /= 10
+        else:
+            b = 1 / layer['swc'].psd
+            a = math.exp(3.496508 + b * math.log(fc))
+            hm = (a * max(0.05, vwc) ** (-b)) / 10
+        layer['matric'] = max(0.0, hm)
+        layer['gravity'] = layer['depth']
+        ae = layer['swc'].airentry / 10
+        hm = layer['matric']
+        ratio = layer['vwc'] / layer['swc'].sat
+        if hm > ae:
+            layer['k'] = layer['ksat'] * ratio ** (3 + 2 / layer['swc'].psd)
+        else:
+            layer['k'] = layer['ksat']
 
 
 
-    #     water_stored_evaporation_depth = 0
-    #     for z in range(number_of_layers):
-    #         if z * layer_depth < self.evaporation_depth:
-    #             effective_depth = min(self.evaporation_depth - z * layer_depth, layer_depth)
-    #             # print(self.evaporation_depth)
-    #             water_stored_evaporation_depth += (soil_moisture[0, z]-Residual_Soil_Moisture) * (effective_depth / layer_depth) * layer_depth * 1e-2  # Convert cm to m for volume
-    #     self.soil_moisure_evaporative_layer=100* water_stored_evaporation_depth/self.evaporation_depth
-    #     # Ensure the new soil moisture does not go below residual soil moisture
-    #     # self.soil_parameters['current_soil_moisture'] = np.maximum(soil_moisture[-1, :], self.soil_parameters['Residual_Soil_Moisture'])
-    #     # print(self.soil_parameters['current_soil_moisture'])
-    #     self.water_supply_for_evaporation=water_stored_evaporation_depth*1000 #mm
-    #     # print("258",self.water_supply_for_evaporation,soil_moisture)
+    def _rootzone_water(self):
+        Root_zone_water_content = 0.0
+        total_thickness = 0.0
+        Root_zone_plant_avail_water = 0.0
+        Evaporative_layer_water_content=0        
+        for layer_indx, layer in enumerate(self.layers):
+            if layer['accthick'] <0.3:
+                Evaporative_layer_water_content+= (layer['vwc'] - 0.005) * layer['thick']*1000
+            # if    evaporative_depth_remaining > 0 :
+            #       Evaporative_layer_water_content+=(layer['vwc'] - 0.005) *min(evaporative_depth_remaining, layer['thick'])*1000 
+            #       evaporative_depth_remaining-=min(evaporative_depth_remaining, layer['thick'])
+            top_of_layer = layer['accthick'] - layer['thick']
+            bottom_of_layer = layer['accthick']
+            if top_of_layer >= self.planting_depth and bottom_of_layer <= self.planting_depth + self.rootdepth:
+                thickness_within_zone = layer['thick']
+            elif top_of_layer < self.planting_depth and bottom_of_layer > self.planting_depth:
+                thickness_within_zone = bottom_of_layer - self.planting_depth
+            elif top_of_layer < self.planting_depth + self.rootdepth and bottom_of_layer > self.planting_depth + self.rootdepth:
+                thickness_within_zone = self.planting_depth + self.rootdepth - top_of_layer
+            else:
+                continue
 
-    #     water_stored_root_zone = 0
-    #     water_stored_below_root_zone = 0
-    #     for z in range(number_of_layers):
-    #         if (z) * layer_depth < Root_Depth:
-    #             effective_depth = min(Root_Depth - z * layer_depth, layer_depth)
-    #             water_stored_root_zone += (soil_moisture[0, z]-Residual_Soil_Moisture) * (effective_depth / layer_depth) * layer_depth * 1e-2  # Convert cm to m for volume
-    #             water_stored_below_root_zone += (soil_moisture[0, z]-Residual_Soil_Moisture) * (layer_depth-effective_depth) * 1e-2  # Convert cm to m for volume
-    #         else:
-    #             water_stored_below_root_zone += (soil_moisture[0, z]-Residual_Soil_Moisture) * layer_depth * 1e-2  # Convert cm to m for volume
+            Root_zone_water_content += (layer['vwc'] - 0.005) * thickness_within_zone
+            Root_zone_plant_avail_water += max(0, (layer['vwc'] - layer['swc'].pwp) * thickness_within_zone)
+            total_thickness += thickness_within_zone
+
+        if total_thickness > 0:
+            avg_soil_moisture = Root_zone_water_content / total_thickness
+            avg_water_content = Root_zone_water_content * 1000
+            Root_zone_plant_avail_water = Root_zone_plant_avail_water * 1000
+        else:
+            avg_soil_moisture = 0.0
+            avg_water_content = 0.0
+            Root_zone_plant_avail_water = 0.0
+
+        self.__prz['wc'] = avg_water_content
+        self.__prz['vwc'] = avg_soil_moisture
+        self.__prz['Root_Zone_Plant_Avail'] = Root_zone_plant_avail_water
+        self.__prz['Evaporative_layer_water_content'] = Evaporative_layer_water_content
+
+    # Function to calculate evaporation as a function of depth
+    def evaporation_profile(self,petsoil, layer_depths, alpha):
+        depths = np.cumsum(layer_depths)  # Cumulative depth at the bottom of each layer
+        evaporation_rates = petsoil * np.exp(-alpha * depths)  # Evaporation at each layer
+        return evaporation_rates
+
+
+    def _calc_water_fluxes(self, cummfluxes, petcrop, petsoil):
+        prvpsi = 0.0
         
+        evaporation_per_layer = self.evaporation_profile(petsoil, self.layer_depths, self.alpha)
+        # print('evaporation_per_layer',evaporation_per_layer)
+        for idx in range(self.number_of_layers):
+            cur = self.layers[idx]
+            prv = cur['prev']
+
+            self._update_heads_k(cur)
+
+            if prv is None:
+                ei = evaporation_per_layer[idx] / 1000
+                ti = 0
+                prvpsi = 0.0
+            else:
+                ei = evaporation_per_layer[idx]/ 1000
+                cj = min(1.0, (cur['accthick'] - self.planting_depth) / self.rootdepth)
+                curpsi = 1.8 * cj - 0.8 * cj ** 2
+                ti = petcrop * (curpsi - prvpsi) / 1000
+                prvpsi = curpsi
+
+            if prv is not None:
+                n = math.log(cur['k']) - math.log(prv['k'])
+                k = (cur['k'] - prv['k']) / n if n != 0.0 else cur['k']
+                grad = (cur['matric'] + cur['gravity']) - (prv['matric'] + prv['gravity'])
+                grad /= (cur['depth'] - prv['depth'])
+                grad = max(0, grad)
+                curinflux = k * grad
+            else:
+                netrain = self.netrain / 1000
+                curinflux = min(netrain, cur['ksat'])
+
+            self.__pf[idx]['t'] = ti
+            self.__pf[idx]['e'] = ei
+            self.__pf[idx]['influx'] = curinflux
+        total_ei=0
+        total_ti=0
+        for idx in range(self.number_of_layers):
+            cur = self.layers[idx]
+            nxt = cur['next']
+
+            wc = cur['vwc'] * cur['thick']
+            wc_e = (cur['vwc'] - 0.005) * cur['thick']  # available water for evaporation
+            wc_ti = (cur['vwc'] - cur['swc'].pwp) * cur['thick']  # available water for transpiration
+
+            influx = self.__pf[idx]['influx']
+
+            if nxt is not None:
+                outflux = self.__pf[idx + 1]['influx']
+            elif not self.has_watertable:
+                outflux = cur['k']
+            else:
+                outflux = self._influx_from_watertable()
+
+            ti = self.__pf[idx]['t']
+            ei = self.__pf[idx]['e']
+            
+
+            if idx == 0:
+                if wc_e + influx - ei <= 0:
+                    # print(f'E is not sufficient in layer {idx}')
+                    ei = wc_e + influx
+                    outflux = 0
+                else:
+                    
+                    if (wc_e + influx - ei)>0 and (wc_e + influx - ei <= outflux):
+                        outflux = wc_e + influx - ei
+                if nxt is not None:
+                    self.__pf[idx + 1]['influx'] = outflux
+
+                netflux = influx - ei - outflux
                 
-    #     self.average_root_zone_water_content=water_stored_root_zone #m
-    #     self.average_below_root_zone_water_content=water_stored_below_root_zone #m
+                
+                
+            elif cur['accthick'] <0.3:
+                if wc_e + influx - ei <= 0:
+                    # print(f'E is not sufficient in layer {idx}')
+                    ei = wc_e + influx
+                    ti=0
+                    outflux = 0
+                
+                else:
+                    if wc_ti + influx - ti -ei <= 0:
+                        # print(f'T is not sufficient in layer {idx}')
+                        ti = wc_ti + influx- ei
+                        outflux = 0
+                    if (wc_ti + influx - ti - ei>0) & (wc_ti + influx - ti - ei<= outflux):
+                        outflux = wc_ti + influx - ti - ei
+                if nxt is not None:
+                    self.__pf[idx + 1]['influx'] = outflux
 
-    #     # print (self.average_root_zone_water_content*1000)
+                netflux = influx - ti - ei- outflux
 
-    
-    def soil_water_balance(self, duration,Soil_Layer_Property, planting_depth, num_intervals, number_of_layers, root_depth,   rain, potential_transpiration_canopy, potential_evaporation_soil):
-        # Define namedtuples
-        Soil_Water_Content = namedtuple('Soil_Water_Content', 'Saturated_Soil_Moisture Field_Capacity_ Permanent_Wilting_Point Pore_Size_Distribution Air_Entry')
-        # RootZone = namedtuple('RootZone', 'Water_Content Soil_Moisture critical Saturated_Soil_Moisture Field_Capacity_ Permanent_Wilting_Point')
-        ActualET = namedtuple('ActualET', 'crop soil')
-        Fluxes = namedtuple('Fluxes', 'transpiration evaporation influx outflux netflux')
-    
-        def initialize_layer(idx, prev_layer, next_layer):
-            nonlocal SoilWater__accumulated_layer_depth
-            layer = layers[idx]
-            layer['prev'] = prev_layer
-            layer['next'] = next_layer
-    
-            prev_accumulated_layer_depth = prev_layer['Accumulated_Layer_Depth'] if prev_layer else 0.0
-            layer['Accumulated_Layer_Depth'] = layer['Layer_Thickness'] + prev_accumulated_layer_depth
-            prev_thickness = prev_layer['Layer_Thickness'] if prev_layer else 0.0
-            depth = 0.5 * (prev_thickness + layer['Layer_Thickness'])
-            layer['depth'] = SoilWater__accumulated_layer_depth + depth
-            SoilWater__accumulated_layer_depth += depth
-    
-            if layer['Soil_Moisture'] < 0:
-                Soil_Moisture = -layer['Soil_Moisture']
-                Field_Capacity_ = layer['Soil_Water_Content'].Field_Capacity_
-                if 1 <= Soil_Moisture <= 2:
-                    Saturated_Soil_Moisture = layer['Soil_Water_Content'].Saturated_Soil_Moisture
-                    Soil_Moisture = Saturated_Soil_Moisture - (Soil_Moisture - 1) * (Saturated_Soil_Moisture - Field_Capacity_)
-                elif 2 < Soil_Moisture <= 3:
-                    Permanent_Wilting_Point = layer['Soil_Water_Content'].Permanent_Wilting_Point
-                    Soil_Moisture = Field_Capacity_ - (Soil_Moisture - 2) * (Field_Capacity_ - Permanent_Wilting_Point)
-                else:
-                    Soil_Moisture = Field_Capacity_
-                layer['Soil_Moisture'] = Soil_Moisture
-                layer['Water_Content'] = layer['Soil_Moisture'] * layer['Layer_Thickness'] * 1000
-    
-            update_heads_k(layer)
-    
-        def update_heads_k(layer):
-            Field_Capacity_ = layer['Soil_Water_Content'].Field_Capacity_
-            Soil_Moisture = layer['Soil_Moisture']
-            if Soil_Moisture >= Field_Capacity_:
-                delta_Field_Capacity_ = Soil_Moisture - Field_Capacity_
-                head_matric = 33 - (33 - layer['Soil_Water_Content'].Air_Entry) * delta_Field_Capacity_ / (layer['Soil_Water_Content'].Saturated_Soil_Moisture - Field_Capacity_)
-                head_matric /= 10
-            else:
-                exponent_b = 1 / layer['Soil_Water_Content'].Pore_Size_Distribution
-                a_coefficient = math.exp(3.496508 + exponent_b * math.log(Field_Capacity_))
-                head_matric = (a_coefficient * max(0.05, Soil_Moisture) ** (-exponent_b)) / 10
-            layer['matric_potential'] = max(0.0, head_matric)
-            layer['gravity_potential'] = layer['depth']
-            Air_Entry = layer['Soil_Water_Content'].Air_Entry / 10
-            head_matric = layer['matric_potential']
-            moisture_ratio = layer['Soil_Moisture'] / layer['Soil_Water_Content'].Saturated_Soil_Moisture
-            if head_matric > Air_Entry:
-                layer['Unaturated_hydraulic_conductivity'] = layer['Saturated_Hydraulic_Conductivity'] * moisture_ratio ** (3 + 2 / layer['Soil_Water_Content'].Pore_Size_Distribution)
-            else:
-                layer['Unaturated_hydraulic_conductivity'] = layer['Saturated_Hydraulic_Conductivity']
-    
-        def tothead(layer):
-            return layer['matric_potential'] + layer['gravity_potential']
-    
-    
-        def calculate_water_fluxes(cumulative_fluxes, potential_transpiration_canopy, potential_evaporation_soil, net_rain):
-            # calculate_root_zone_water()
-            nonlocal actual_evapotranspiration
-            actual_evapotranspiration = ActualET(potential_transpiration_canopy, potential_evaporation_soil)
-    
-            previous_soil_moisture_potential = 0.0
-            for index in range(number_of_layers):
-                current_layer = layers[index]
-                previous_layer = current_layer['prev']
-    
-                update_heads_k(current_layer)
-    
-                evaporation_influx = 0.0 if previous_layer is not None else actual_evapotranspiration.soil / 1000
-                root_fraction = min(1.0, current_layer['Accumulated_Layer_Depth'] / root_depth)
-                current_soil_moisture_potential = 1.8 * root_fraction - 0.8 * root_fraction ** 2
-                transpiration_influx = actual_evapotranspiration.crop * (current_soil_moisture_potential - previous_soil_moisture_potential) / 1000
-                previous_soil_moisture_potential = current_soil_moisture_potential
-    
-                if previous_layer is not None:
-                    log_k_ratio = math.log(current_layer['Unaturated_hydraulic_conductivity']) - math.log(previous_layer['Unaturated_hydraulic_conductivity'])
-                    k_average = (current_layer['Unaturated_hydraulic_conductivity'] - previous_layer['Unaturated_hydraulic_conductivity']) / log_k_ratio if log_k_ratio != 0.0 else current_layer['Unaturated_hydraulic_conductivity']
-                    gradient = (tothead(current_layer) - tothead(previous_layer)) / (current_layer['depth'] - previous_layer['depth'])
-                    current_influx = k_average * gradient - transpiration_influx
-                else:
-                    net_rain_mm = net_rain / 1000
-                    current_influx = min(net_rain_mm, current_layer['Saturated_Hydraulic_Conductivity']) - evaporation_influx - transpiration_influx
-    
-                cumulative_fluxes[index]['transpiration'] = transpiration_influx
-                cumulative_fluxes[index]['evaporation'] = evaporation_influx
-                cumulative_fluxes[index]['influx'] = current_influx
-    
-            for index in range(number_of_layers):
-                current_layer = layers[index]
-                next_layer = current_layer['next']
-    
-                Water_Content = current_layer['Soil_Moisture'] * current_layer['Layer_Thickness']
-                influx = cumulative_fluxes[index]['influx']
-                if next_layer is not None:
-                    outflux = cumulative_fluxes[index + 1]['influx']
-                else:
-                    outflux = current_layer['Unaturated_hydraulic_conductivity']
-    
-                next_Water_Content = influx + Water_Content - outflux
-                dry_limit = current_layer['Layer_Thickness'] * 0.005
-                saturated_limit = current_layer['Layer_Thickness'] * current_layer['Soil_Water_Content'].Saturated_Soil_Moisture
-                if next_Water_Content < dry_limit:
-                    outflux = influx + Water_Content - dry_limit
-                elif next_Water_Content > saturated_limit:
-                    outflux = influx + Water_Content - saturated_limit
-    
-                if next_layer is not None:
-                    cumulative_fluxes[index + 1]['influx'] = outflux
-    
-                cumulative_fluxes[index]['outflux'] = outflux
-                cumulative_fluxes[index]['netflux'] = cumulative_fluxes[index]['influx'] - cumulative_fluxes[index]['outflux']
-    
-                Water_Content += cumulative_fluxes[index]['netflux'] / num_intervals
-                current_layer['Soil_Moisture'] = max(0.005, min(current_layer['Soil_Water_Content'].Saturated_Soil_Moisture, Water_Content / current_layer['Layer_Thickness']))
-                current_layer['Water_Content'] = current_layer['Soil_Moisture'] * current_layer['Layer_Thickness'] * 1000
-    
-                for field in Fluxes._fields:
-                    flux_increment = cumulative_fluxes[index][field] / num_intervals
-                    cumulative_fluxes[index][field] += flux_increment
-    
-        def daily_water_balance(rain, potential_transpiration_canopy, potential_evaporation_soil):
-            nonlocal net_rain, root_depth
-            net_rain = rain
-            root_depth = root_depth
-    
-            cumulative_fluxes = [{field: 0.0 for field in Fluxes._fields} for _ in range(number_of_layers)]
-    
-            for interval in range(num_intervals):
-                calculate_water_fluxes(cumulative_fluxes, potential_transpiration_canopy, potential_evaporation_soil, net_rain)
-    
-            # root_water = RootZone(*[root_zone[field] for field in RootZone._fields])
-            # print('root_water------------->',root_water)
-            for index, layer in enumerate(layers):
-                layer['fluxes'] = Fluxes(*[cumulative_fluxes[index][field] for field in Fluxes._fields])
-    
-        def calculate_root_zone_stat(layers, planting_depth, root_depth):
-            # total_moisture = 0.0
-            Root_zone_water_content = 0.0
-            total_thickness = 0.0
-            Root_zone_plant_avail_water=0.0
-            for layer in layers:
-    
-                top_of_layer = layer['Accumulated_Layer_Depth'] - layer['Layer_Thickness']
-                top_of_layer=int(round(top_of_layer,2)*100)/100
-                # top_of_layer=top_of_layer
-                # print(top_of_layer,layer['Layer_Thickness'],layer['Accumulated_Layer_Depth'])
-                bottom_of_layer = layer['Accumulated_Layer_Depth']
-                if top_of_layer >= planting_depth and bottom_of_layer <= planting_depth + root_depth:
-                    # print('c1')
-                    thickness_within_zone = layer['Layer_Thickness']
-                elif top_of_layer < planting_depth and bottom_of_layer > planting_depth:
-                    # print('c2')
-                    # print(top_of_layer)
-                    thickness_within_zone = bottom_of_layer - planting_depth
-                elif top_of_layer < planting_depth + root_depth and bottom_of_layer > planting_depth + root_depth:
-                    thickness_within_zone = planting_depth + root_depth - top_of_layer
-                    # print('c3')
-    
-                else:
-                    # print('c4')
-    
-                    continue
-    
-                Root_zone_water_content += layer['Soil_Moisture'] * thickness_within_zone
-                Root_zone_plant_avail_water +=max(0,(layer['Soil_Moisture']-layer['Soil_Water_Content'].Permanent_Wilting_Point)* thickness_within_zone)
-               
-                total_thickness += thickness_within_zone
-    
-            if total_thickness > 0:
-                avg_soil_moisture = Root_zone_water_content / total_thickness
-                avg_water_content = Root_zone_water_content*1000
-                Root_zone_plant_avail_water =Root_zone_plant_avail_water*1000
-            else:
-                avg_soil_moisture = 0.0
-                avg_water_content = 0.0
-                Root_zone_plant_avail_water =0.0
-    
-            return avg_soil_moisture, avg_water_content,Root_zone_plant_avail_water
-    
-        layers = []
-        net_rain = 0.0
-        actual_evapotranspiration = ActualET(0.0, 0.0)
-        cumulative_fluxes = [{field: 0.0 for field in Fluxes._fields} for _ in range(number_of_layers)]
-        # root_zone = {field: 0.0 for field in RootZone._fields}
-        SoilWater__accumulated_layer_depth = 0.0
-    
-        layers_config = Soil_Layer_Property['layers']
-        for i in range(number_of_layers):
-            layer = {
-                'Layer_Thickness': layers_config[i]['Layer_Thickness'],
-                'Soil_Moisture': layers_config[i]['Soil_Moisture'],
-                'Water_Content': layers_config[i]['Soil_Moisture'] * layers_config[i]['Layer_Thickness'] * 1000,
-                'Soil_Water_Content': Soil_Water_Content(layers_config[i]['Saturated_Soil_Moisture'],
-                                                         layers_config[i]['Field_Capacity_'],
-                                                         layers_config[i]['Permanent_Wilting_Point'],
-                                                         layers_config[i]['Pore_Size_Distribution'],
-                                                         layers_config[i]['Air_Entry']),
-                'Saturated_Hydraulic_Conductivity': layers_config[i]['Saturated_Hydraulic_Conductivity'],
-                'Unaturated_hydraulic_conductivity': 0.0,
-                'matric_potential': 0.0,
-                'gravity_potential': 0.0,
-                'fluxes': Fluxes(0.0, 0.0, 0.0, 0.0, 0.0),
-                'prev': None,
-                'next': None
-            }
-            layers.append(layer)
-    
-        for i in range(number_of_layers):
-            prev_layer = layers[i - 1] if i > 0 else None
-            next_layer = layers[i + 1] if i < number_of_layers - 1 else None
-            initialize_layer(i, prev_layer, next_layer)
-    
-        # root_zone_stat=calculate_root_zone_water()
-    
-        for day in range(1, duration + 1):
-            # print(f'Day {day}')
-            daily_water_balance(rain, potential_transpiration_canopy, potential_evaporation_soil)
-    
-        soil_moisture_array = [layer['Soil_Moisture'] for layer in layers]
-        water_content_array = [layer['Water_Content'] for layer in layers]
-    
-        Root_zone_avg_soil_moisture, Root_zone_avg_water_content,Root_zone_plant_avail_water = calculate_root_zone_stat(layers, planting_depth, root_depth)
-    
-        print('\ndone.')
+            else :
+                if wc_e + influx - ti <= 0:
+                    # print(f'E is not sufficient in layer {idx}')
+                    ti = wc_e + influx
+                    outflux = 0
+                
         
-        return soil_moisture_array, water_content_array, Root_zone_avg_soil_moisture, Root_zone_avg_water_content,Root_zone_plant_avail_water
+                if (wc_ti + influx - ti >0) & (wc_ti + influx - ti <= outflux):
+                    outflux = wc_ti + influx - ti - ei
+                if nxt is not None:
+                    self.__pf[idx + 1]['influx'] = outflux
 
-    def Current_Soil_Water_Status(self, irrigation_amount,Root_Depth):
-        soil_moisture_array, _, _, _,Root_zone_plant_avail_water=self.soil_water_balance(1,self.Soil_Layer_Property, self.planting_depth, self.num_intervals, self.number_of_layers, Root_Depth, irrigation_amount, 0, 0 )
-        self.water_supply_for_evaporation=soil_moisture_array[0]*self.Evaporative_Depth
-        self.water_supply_for_Transpiration=Root_zone_plant_avail_water
+                netflux = influx - ti -  outflux
+            total_ei+=ei
+            total_ti+=ti
+            self.__pf[idx]['outflux'] = outflux
+            self.__pf[idx]['netflux'] = netflux
+            self.__pf[idx]['influx'] = influx
+
+            wc += self.__pf[idx]['netflux'] / self.num_intervals
         
+            
+            cur['vwc'] = max(0.005, min(cur['swc'].sat, wc / cur['thick']))
+            
+    
+            
+            cur['wc'] = cur['vwc'] * cur['thick'] * 1000
+
+            for field in Fluxes._fields:
+                n1 = self.__pf[idx][field] / self.num_intervals
+                cummfluxes[idx][field] += n1
+
+        self._rootzone_water()
+        self.Actual_Daily_Evaporation=total_ei*1000
+        self.Actual_Daily_Transpiration=total_ti*1000
+        # print('Soil 533','A_evap',total_ei,'A_tranpiration',total_ti, 'PT',petcrop)
+
+    def daily_water_balance(self, rain, petcrop, petsoil,rootdepth):
+        self.netrain = rain
+        self.rootdepth = rootdepth
+
+        cummfluxes = [{field: 0.0 for field in Fluxes._fields} for _ in range(self.number_of_layers)]
+
+        for i in range(self.num_intervals):
+            self._calc_water_fluxes(cummfluxes, petcrop, petsoil)
+
+        self.rootwater = RootZone(*[self.__prz[field] for field in RootZone._fields])
+        for i, layer in enumerate(self.layers):
+            layer['fluxes'] = Fluxes(*[cummfluxes[i][field] for field in Fluxes._fields])
+
+    def _influx_from_watertable(self):
+        last = self.layers[-1]
+        k = (last['ksat'] - last['k']) / (math.log(last['ksat']) - math.log(last['k']))
+        hm = (33 - (33 - last['swc'].airentry)) / 10
+        hg = last['accthick']
+        tothead = hm + hg
+        return k * (tothead - (last['matric'] + last['gravity'])) / (last['thick'] * 0.5)
+
+    def run_soil_water_model(self, duration, rain,  transpiration, evaporation,rootdepth):
+        nlayers = self.number_of_layers
+        res = {
+                    'wc': [[] for _ in range(nlayers)],
+                    'vwc': [[] for _ in range(nlayers)]
+                }
+        for i in range(duration):
+            # day = i + 1
+            self.daily_water_balance(rain,  transpiration, evaporation,rootdepth)
+
+            plantwc = self.rootwater.Root_Zone_Plant_Avail
+            evapowc = self.rootwater.Evaporative_layer_water_content
+            Root_zone_avg_water_content = self.rootwater.wc
+            Root_zone_avg_soil_moisture = self.rootwater.vwc
+        wc_result=[]    
+        vwc_result=[]
+        for j, layer in enumerate(self.layers):
+            wc_result.append(layer['wc'])
+            vwc_result.append(layer['vwc'])
+
+        self.results = res  # Store the results in an attribute
+        self.soil_moisure_evaporative_layer=vwc_result[0]
+        return plantwc, evapowc,Root_zone_avg_water_content,Root_zone_avg_soil_moisture, wc_result, vwc_result
+        
+
+    # def Current_Soil_Water_Status(self, irrigation_amount,Root_Depth):
+    #     plantwc, evapowc, _, _,_,soil_moisture_array=self.run_soil_water_model(1,irrigation_amount,  0, 0, Root_Depth,  )
+    #     self.water_supply_for_evaporation=evapowc
+    #     self.soil_moisure_evaporative_layer=soil_moisture_array[0]
+    #     self.water_supply_for_Transpiration=plantwc
+
     def Calculate_Soil_Evaporation(self,irrigation_amount, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination,
                                              Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temperature,
                                              Min_Temperature, Vapour_Pressure_Deficit, Wind_Speed, 
                                              soil_resistance_to_evaporation,Root_Depth,Leaf_Blade_Angle, Total_Leaf_Area_Index,
-                                             Light_Extinction_Coefficient, Potential_Canopy_Transpiration,Hourly_transpiration_Shaded, Hourly_transpiration_Sunlit):
+                                             Light_Extinction_Coefficient, Potential_Canopy_Transpiration):
 
             
             # Convert daily climate data to Hourly data
             Hourly_climate_data, gaussian_weights = Leaf.Leaf.convert_daily_to_hourly(Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, Solar_Radiation, Max_Temperature, Min_Temperature, Wind_Speed)
             potential_evaporation_soil_first_estimate=[]
-            for gaussian_weight,(Hourly_Solar_Constant, Hourly_temperature, Hourly_sin_beam, Hourly_Solar_Radiation, Hourly_wind_speed), shaded_transpiration, sunlit_transpiration in zip(gaussian_weights,Hourly_climate_data, Hourly_transpiration_Shaded, Hourly_transpiration_Sunlit):
+            for gaussian_weight,(Hourly_Solar_Constant, Hourly_temperature, Hourly_sin_beam, Hourly_Solar_Radiation, Hourly_wind_speed) in zip(gaussian_weights,Hourly_climate_data):
                 
                 Incoming_PAR = 0.5 * Hourly_Solar_Radiation  # Partition of incoming solar radiation to PAR
                 Incoming_NIR = 0.5 * Hourly_Solar_Radiation  # Partition of incoming solar radiation to NIR
@@ -625,192 +666,140 @@ class Soil:
                                                    (1 - soil_nir_reflection) * (NIR_Direct * np.exp(-Beam_Reflection_Coefficient_NIR * Total_Leaf_Area_Index) + NIR_Diffuse * np.exp(-Diffuse_Extinction_Coefficient_NIR * Total_Leaf_Area_Index))
                 # Calculate potential evaporation and net radiation using Penman-Monteith equation
                 potential_evaporation_soil, soil_absorbed_radiation = Leaf.Leaf.Penman_Monteith(soil_resistance_to_evaporation, turbulence_resistance_soil, water_boundary_layer_resistance_soil, boundary_layer_resistance_soil, absorbed_total_radiation_by_soil, atmospheric_transmissivity, 1, Hourly_temperature, vapor_pressure_deficit, slope_vapor_pressure_temperature, vapor_pressure_deficit)
-                #print(soil_resistance_to_evaporation, turbulence_resistance_soil, water_boundary_layer_resistance_soil, boundary_layer_resistance_soil,)
                 potential_evaporation_soil = max(0, potential_evaporation_soil)
                 potential_evaporation_soil_first_estimate.append(potential_evaporation_soil)
             potential_evaporation_soil_first_estimate_daily = Leaf.Leaf.aggregate_to_daily(potential_evaporation_soil_first_estimate, Day_Length)
-            # print(potential_evaporation_soil_first_estimate)
-            Maximum_possible_Evaporation=self.water_supply_for_evaporation
-            if potential_evaporation_soil_first_estimate_daily > Maximum_possible_Evaporation :
-                Water_Stress_Fraction=Maximum_possible_Evaporation/potential_evaporation_soil_first_estimate_daily
-                potential_evaporation_soil_estimate=np.array(potential_evaporation_soil_first_estimate)*Water_Stress_Fraction
-            else:
-                potential_evaporation_soil_estimate=np.array(potential_evaporation_soil_first_estimate)
-            # print('372',potential_evaporation_soil_estimate,Maximum_possible_Evaporation)
+            self.potential_evaporation=potential_evaporation_soil_first_estimate_daily
+            # Maximum_possible_Evaporation=self.water_supply_for_evaporation
 
-            Hourly_Actual_Soil_Evap = []
-            Hourly_Air_Soil_temp_dif = []
-            Hourly_Soil_Rad = []
-            Hourly_boundary_layer_resistance_soil=[]
-            Hourly_turbulence_resistance_soil=[]
+            # if potential_evaporation_soil_first_estimate_daily > Maximum_possible_Evaporation :
+            #     Water_Stress_Fraction=Maximum_possible_Evaporation/potential_evaporation_soil_first_estimate_daily
+            #     potential_evaporation_soil_estimate=np.array(potential_evaporation_soil_first_estimate)*Water_Stress_Fraction
+            # else:
+            #     potential_evaporation_soil_estimate=np.array(potential_evaporation_soil_first_estimate)
 
-            for potential_evaporation_soil_estimate_instant,(Hourly_Solar_Constant, Hourly_temperature, Hourly_sin_beam, Hourly_Solar_Radiation, Hourly_wind_speed), shaded_transpiration, sunlit_transpiration in zip(potential_evaporation_soil_estimate,Hourly_climate_data, Hourly_transpiration_Shaded, Hourly_transpiration_Sunlit):
+            # Hourly_Actual_Soil_Evap = []
+            # Hourly_Air_Soil_temp_dif = []
+            # Hourly_Soil_Rad = []
+            # Hourly_boundary_layer_resistance_soil=[]
+            # Hourly_turbulence_resistance_soil=[]
+
+            # for potential_evaporation_soil_estimate_instant,(Hourly_Solar_Constant, Hourly_temperature, Hourly_sin_beam, Hourly_Solar_Radiation, Hourly_wind_speed), shaded_transpiration, sunlit_transpiration in zip(potential_evaporation_soil_estimate,Hourly_climate_data, Hourly_transpiration_Shaded, Hourly_transpiration_Sunlit):
                 
-                Incoming_PAR = 0.5 * Hourly_Solar_Radiation  # Partition of incoming solar radiation to PAR
-                Incoming_NIR = 0.5 * Hourly_Solar_Radiation  # Partition of incoming solar radiation to NIR
-                # Atmospheric transmissivity based on incoming PAR and solar geometry
-                atmospheric_transmissivity = Incoming_PAR / (0.5 * Hourly_Solar_Constant * Hourly_sin_beam)
+            #     Incoming_PAR = 0.5 * Hourly_Solar_Radiation  # Partition of incoming solar radiation to PAR
+            #     Incoming_NIR = 0.5 * Hourly_Solar_Radiation  # Partition of incoming solar radiation to NIR
+            #     # Atmospheric transmissivity based on incoming PAR and solar geometry
+            #     atmospheric_transmissivity = Incoming_PAR / (0.5 * Hourly_Solar_Constant * Hourly_sin_beam)
            
-                # Saturation vapor pressure and vapor pressure deficit calculations
-                saturation_vapor_pressure = 0.611 * math.exp(17.4 * Hourly_temperature / (Hourly_temperature + 239.))
-                vapor_pressure_deficit = max(0., saturation_vapor_pressure - Vapour_Pressure_Deficit)
+            #     # Saturation vapor pressure and vapor pressure deficit calculations
+            #     saturation_vapor_pressure = 0.611 * math.exp(17.4 * Hourly_temperature / (Hourly_temperature + 239.))
+            #     vapor_pressure_deficit = max(0., saturation_vapor_pressure - Vapour_Pressure_Deficit)
                 
                 
-                slope_vapor_pressure_temperature = 4158.6 * saturation_vapor_pressure / (Hourly_temperature + 239.) ** 2
+            #     slope_vapor_pressure_temperature = 4158.6 * saturation_vapor_pressure / (Hourly_temperature + 239.) ** 2
            
-                # Turbulence resistance for soil using logarithmic wind profile
-                turbulence_resistance_soil = 0.74 * (np.log(56.)) ** 2 / (0.4 ** 2 * Hourly_wind_speed)
+            #     # Turbulence resistance for soil using logarithmic wind profile
+            #     turbulence_resistance_soil = 0.74 * (np.log(56.)) ** 2 / (0.4 ** 2 * Hourly_wind_speed)
                 
-                # Boundary layer resistance for soil considering wind speed and leaf area
-                boundary_layer_resistance_soil = 172. * np.sqrt(0.05 / max(0.1, Hourly_wind_speed * np.exp(-Light_Extinction_Coefficient * Total_Leaf_Area_Index)))
+            #     # Boundary layer resistance for soil considering wind speed and leaf area
+            #     boundary_layer_resistance_soil = 172. * np.sqrt(0.05 / max(0.1, Hourly_wind_speed * np.exp(-Light_Extinction_Coefficient * Total_Leaf_Area_Index)))
                 
             
             
             
-                water_boundary_layer_resistance_soil = 0.93 * boundary_layer_resistance_soil
+            #     water_boundary_layer_resistance_soil = 0.93 * boundary_layer_resistance_soil
                 
-                # Calculation of the fractional diffuse light (frdf) based on atmospheric transmissivity
-                if atmospheric_transmissivity < 0.22:
-                    fractional_diffuse_light = 1
-                elif 0.22 < atmospheric_transmissivity <= 0.35:
-                    fractional_diffuse_light = 1 - 6.4 * (atmospheric_transmissivity - 0.22) ** 2
-                else:
-                    fractional_diffuse_light = 1.47 - 1.66 * atmospheric_transmissivity
+            #     # Calculation of the fractional diffuse light (frdf) based on atmospheric transmissivity
+            #     if atmospheric_transmissivity < 0.22:
+            #         fractional_diffuse_light = 1
+            #     elif 0.22 < atmospheric_transmissivity <= 0.35:
+            #         fractional_diffuse_light = 1 - 6.4 * (atmospheric_transmissivity - 0.22) ** 2
+            #     else:
+            #         fractional_diffuse_light = 1.47 - 1.66 * atmospheric_transmissivity
            
-                # Ensuring a minimum threshold for the fractional diffuse light
-                fractional_diffuse_light = max(fractional_diffuse_light, 0.15 + 0.85 * (1 - np.exp(-0.1 / Hourly_sin_beam)))
+            #     # Ensuring a minimum threshold for the fractional diffuse light
+            #     fractional_diffuse_light = max(fractional_diffuse_light, 0.15 + 0.85 * (1 - np.exp(-0.1 / Hourly_sin_beam)))
            
-                # Incoming diffuse PAR (PARDF) and direct PAR (PARDR) based on the calculated fractional diffuse light
-                PAR_Diffuse = Incoming_PAR * fractional_diffuse_light
-                PAR_Direct = Incoming_PAR - PAR_Diffuse
+            #     # Incoming diffuse PAR (PARDF) and direct PAR (PARDR) based on the calculated fractional diffuse light
+            #     PAR_Diffuse = Incoming_PAR * fractional_diffuse_light
+            #     PAR_Direct = Incoming_PAR - PAR_Diffuse
            
-                # Extinction and RefLection coefficients
-                # Convert leaf blade angle from degrees to radians for calculations
-                Leaf_Blade_Angle_Radians = Leaf_Blade_Angle * np.pi / 180
+            #     # Extinction and RefLection coefficients
+            #     # Convert leaf blade angle from degrees to radians for calculations
+            #     Leaf_Blade_Angle_Radians = Leaf_Blade_Angle * np.pi / 180
                 
-                # Calculate the direct beam extinction coefficient for PAR using leaf blade angle
-                Direct_Beam_Extinction_Coefficient_PAR = Leaf.Leaf.KDR_Coeff(Hourly_sin_beam, Leaf_Blade_Angle_Radians)
+            #     # Calculate the direct beam extinction coefficient for PAR using leaf blade angle
+            #     Direct_Beam_Extinction_Coefficient_PAR = Leaf.Leaf.KDR_Coeff(Hourly_sin_beam, Leaf_Blade_Angle_Radians)
                 
-                # Leaf scattering coefficients for PAR and NIR
-                Scattering_Coefficient_PAR = 0.2  # Scattering coefficient for Photosynthetically Active Radiation
-                Scattering_Coefficient_NIR = 0.8  # Scattering coefficient for Near-Infrared Radiation
+            #     # Leaf scattering coefficients for PAR and NIR
+            #     Scattering_Coefficient_PAR = 0.2  # Scattering coefficient for Photosynthetically Active Radiation
+            #     Scattering_Coefficient_NIR = 0.8  # Scattering coefficient for Near-Infrared Radiation
                 
-                # Calculate diffuse extinction coefficients for PAR and NIR using total leaf area index and leaf blade angle
-                Diffuse_Extinction_Coefficient_PAR = Leaf.Leaf.KDF_Coeff(Total_Leaf_Area_Index, Leaf_Blade_Angle_Radians, Scattering_Coefficient_PAR)
-                Diffuse_Extinction_Coefficient_NIR = Leaf.Leaf.KDF_Coeff(Total_Leaf_Area_Index, Leaf_Blade_Angle_Radians, Scattering_Coefficient_NIR)
+            #     # Calculate diffuse extinction coefficients for PAR and NIR using total leaf area index and leaf blade angle
+            #     Diffuse_Extinction_Coefficient_PAR = Leaf.Leaf.KDF_Coeff(Total_Leaf_Area_Index, Leaf_Blade_Angle_Radians, Scattering_Coefficient_PAR)
+            #     Diffuse_Extinction_Coefficient_NIR = Leaf.Leaf.KDF_Coeff(Total_Leaf_Area_Index, Leaf_Blade_Angle_Radians, Scattering_Coefficient_NIR)
                 
-                # Calculate beam and canopy reflection coefficients for PAR and NIR
-                Beam_Reflection_Coefficient_PAR, Canopy_Reflection_Coefficient_PAR = Leaf.Leaf.REFLECTION_Coeff(Scattering_Coefficient_PAR, Direct_Beam_Extinction_Coefficient_PAR)
-                Beam_Reflection_Coefficient_NIR, Canopy_Reflection_Coefficient_NIR = Leaf.Leaf.REFLECTION_Coeff(Scattering_Coefficient_NIR, Direct_Beam_Extinction_Coefficient_PAR)
+            #     # Calculate beam and canopy reflection coefficients for PAR and NIR
+            #     Beam_Reflection_Coefficient_PAR, Canopy_Reflection_Coefficient_PAR = Leaf.Leaf.REFLECTION_Coeff(Scattering_Coefficient_PAR, Direct_Beam_Extinction_Coefficient_PAR)
+            #     Beam_Reflection_Coefficient_NIR, Canopy_Reflection_Coefficient_NIR = Leaf.Leaf.REFLECTION_Coeff(Scattering_Coefficient_NIR, Direct_Beam_Extinction_Coefficient_PAR)
            
                 
-                # Incoming diffuse NIR (NIRDF) and direct NIR (NIRDR)
-                NIR_Diffuse = Incoming_NIR * fractional_diffuse_light
-                NIR_Direct = Incoming_NIR - NIR_Diffuse
+            #     # Incoming diffuse NIR (NIRDF) and direct NIR (NIRDR)
+            #     NIR_Diffuse = Incoming_NIR * fractional_diffuse_light
+            #     NIR_Direct = Incoming_NIR - NIR_Diffuse
                 
-                # Absorbed total radiation (PAR + NIR) by soil
-                soil_par_reflection = 0.1  # Soil PAR reflection coefficient
-                # Soil NIR reflection coefficient, varying with soil water content (wcul)
-                soil_nir_reflection = self.switch_function(self.soil_moisure_evaporative_layer - 0.5, 0.52 - 0.68 * self.soil_moisure_evaporative_layer, 0.18)
-                absorbed_total_radiation_by_soil = (1 - soil_par_reflection) * (PAR_Direct * np.exp(-Beam_Reflection_Coefficient_PAR * Total_Leaf_Area_Index) + PAR_Diffuse * np.exp(-Diffuse_Extinction_Coefficient_PAR * Total_Leaf_Area_Index)) + \
-                                                   (1 - soil_nir_reflection) * (NIR_Direct * np.exp(-Beam_Reflection_Coefficient_NIR * Total_Leaf_Area_Index) + NIR_Diffuse * np.exp(-Diffuse_Extinction_Coefficient_NIR * Total_Leaf_Area_Index))
+            #     # Absorbed total radiation (PAR + NIR) by soil
+            #     soil_par_reflection = 0.1  # Soil PAR reflection coefficient
+            #     # Soil NIR reflection coefficient, varying with soil water content (wcul)
+            #     soil_nir_reflection = self.switch_function(self.soil_moisure_evaporative_layer - 0.5, 0.52 - 0.68 * self.soil_moisure_evaporative_layer, 0.18)
+            #     absorbed_total_radiation_by_soil = (1 - soil_par_reflection) * (PAR_Direct * np.exp(-Beam_Reflection_Coefficient_PAR * Total_Leaf_Area_Index) + PAR_Diffuse * np.exp(-Diffuse_Extinction_Coefficient_PAR * Total_Leaf_Area_Index)) + \
+            #                                        (1 - soil_nir_reflection) * (NIR_Direct * np.exp(-Beam_Reflection_Coefficient_NIR * Total_Leaf_Area_Index) + NIR_Diffuse * np.exp(-Diffuse_Extinction_Coefficient_NIR * Total_Leaf_Area_Index))
                
            
                 
-                # Temperature difference driven by soil evaporation and net radiation
-                temperature_difference_soil = self.Limit_Function(-25., 25., (soil_absorbed_radiation - Latent_Heat_of_Water_Vaporization * potential_evaporation_soil_estimate_instant) * (boundary_layer_resistance_soil + turbulence_resistance_soil) / Volumetric_Heat_Capacity_Air) 
-                #print(soil_absorbed_radiation ,  actual_evaporation_soil, boundary_layer_resistance_soil , turbulence_resistance_soil)
-                average_soil_temperature = Hourly_temperature + temperature_difference_soil
+            #     # Temperature difference driven by soil evaporation and net radiation
+            #     temperature_difference_soil = self.Limit_Function(-25., 25., (soil_absorbed_radiation - Latent_Heat_of_Water_Vaporization * potential_evaporation_soil_estimate_instant) * (boundary_layer_resistance_soil + turbulence_resistance_soil) / Volumetric_Heat_Capacity_Air) 
+            #     average_soil_temperature = Hourly_temperature + temperature_difference_soil
                 
-                # Recalculate potential evaporation with updated soil temperature
-                saturation_vapor_pressure_soil = 0.611 * math.exp(17.4 * average_soil_temperature / (average_soil_temperature + 239.))
-                slope_vapor_pressure_curve_soil = (saturation_vapor_pressure_soil - saturation_vapor_pressure) / self.Avoid_Zero_Division(temperature_difference_soil)
-                potential_evaporation_second_estimate, soil_absorbed_radiation_second_estimate = Leaf.Leaf.Penman_Monteith(soil_resistance_to_evaporation, turbulence_resistance_soil, water_boundary_layer_resistance_soil, boundary_layer_resistance_soil, absorbed_total_radiation_by_soil, atmospheric_transmissivity, 1, average_soil_temperature, Vapour_Pressure_Deficit, slope_vapor_pressure_curve_soil, vapor_pressure_deficit)
-                Actual_Soil_Evap = max(0, potential_evaporation_second_estimate)
+            #     # Recalculate potential evaporation with updated soil temperature
+            #     saturation_vapor_pressure_soil = 0.611 * math.exp(17.4 * average_soil_temperature / (average_soil_temperature + 239.))
+            #     slope_vapor_pressure_curve_soil = (saturation_vapor_pressure_soil - saturation_vapor_pressure) / self.Avoid_Zero_Division(temperature_difference_soil)
+            #     potential_evaporation_second_estimate, soil_absorbed_radiation_second_estimate = Leaf.Leaf.Penman_Monteith(soil_resistance_to_evaporation, turbulence_resistance_soil, water_boundary_layer_resistance_soil, boundary_layer_resistance_soil, absorbed_total_radiation_by_soil, atmospheric_transmissivity, 1, average_soil_temperature, Vapour_Pressure_Deficit, slope_vapor_pressure_curve_soil, vapor_pressure_deficit)
+            #     Actual_Soil_Evap = max(0, potential_evaporation_second_estimate)
                 
                 
-                Hourly_Actual_Soil_Evap.append(Actual_Soil_Evap)
-                Hourly_Soil_Rad.append(soil_absorbed_radiation_second_estimate)
-                Hourly_Air_Soil_temp_dif.append(temperature_difference_soil)
-                Hourly_boundary_layer_resistance_soil.append(boundary_layer_resistance_soil)
-                Hourly_turbulence_resistance_soil.append(turbulence_resistance_soil)
-            Actual_Daily_Evaporation = Leaf.Leaf.aggregate_to_daily(Hourly_Actual_Soil_Evap, Day_Length)
+            #     Hourly_Actual_Soil_Evap.append(Actual_Soil_Evap)
+            #     Hourly_Soil_Rad.append(soil_absorbed_radiation_second_estimate)
+            #     Hourly_Air_Soil_temp_dif.append(temperature_difference_soil)
+            #     Hourly_boundary_layer_resistance_soil.append(boundary_layer_resistance_soil)
+            #     Hourly_turbulence_resistance_soil.append(turbulence_resistance_soil)
+            # Actual_Daily_Evaporation = Leaf.Leaf.aggregate_to_daily(Hourly_Actual_Soil_Evap, Day_Length)
 
-            if Actual_Daily_Evaporation > Maximum_possible_Evaporation :
-                Water_Stress_Fraction=Maximum_possible_Evaporation/Actual_Daily_Evaporation
-                potential_evaporation_soil_estimate=np.array(Hourly_Actual_Soil_Evap)*Water_Stress_Fraction
-                self.Hourly_Actual_Soil_Evap=potential_evaporation_soil_estimate
-                self.Actual_Daily_Evaporation = Leaf.Leaf.aggregate_to_daily(potential_evaporation_soil_estimate, Day_Length)
+            # if Actual_Daily_Evaporation > Maximum_possible_Evaporation :
+            #     Water_Stress_Fraction=Maximum_possible_Evaporation/Actual_Daily_Evaporation
+            #     potential_evaporation_soil_estimate=np.array(Hourly_Actual_Soil_Evap)*Water_Stress_Fraction
+            #     self.Hourly_Actual_Soil_Evap=potential_evaporation_soil_estimate
+            #     self.Actual_Daily_Evaporation = Leaf.Leaf.aggregate_to_daily(potential_evaporation_soil_estimate, Day_Length)
 
-                # if (Water_Stress_Fraction <0.95) and (Water_Stress_Fraction>0):
-                #     print(Water_Stress_Fraction)
-                #     print('warning ..... Soil evaporation convergence issue!!!!!!!!!')
-            else:
-                self.Hourly_Actual_Soil_Evap=Hourly_Actual_Soil_Evap
-                self.Actual_Daily_Evaporation = Actual_Daily_Evaporation
-            # print('484',self.Actual_Daily_Evaporation,Maximum_possible_Evaporation,irrigation_amount)
+            #     # if (Water_Stress_Fraction <0.95) and (Water_Stress_Fraction>0):
+            #     #     print(Water_Stress_Fraction)
+            #     #     print('warning ..... Soil evaporation convergence issue!!!!!!!!!')
+            # else:
+            #     self.Hourly_Actual_Soil_Evap=Hourly_Actual_Soil_Evap
+            #     self.Actual_Daily_Evaporation = Actual_Daily_Evaporation
 
-            # print(Hourly_Actual_Soil_Evap)    
 
-            self.Hourly_Soil_Rad=Hourly_Soil_Rad
-            self.Hourly_Air_Soil_temp_dif=Hourly_Air_Soil_temp_dif
-            self.Hourly_boundary_layer_resistance_soil=Hourly_boundary_layer_resistance_soil
-            self.Hourly_turbulence_resistance_soil=Hourly_turbulence_resistance_soil
+            # self.Hourly_Soil_Rad=Hourly_Soil_Rad
+            # self.Hourly_Air_Soil_temp_dif=Hourly_Air_Soil_temp_dif
+            # self.Hourly_boundary_layer_resistance_soil=Hourly_boundary_layer_resistance_soil
+            # self.Hourly_turbulence_resistance_soil=Hourly_turbulence_resistance_soil
             
-            # Aggregate Hourly data back to daily totals
-            self.potential_SoilRad_daily = Leaf.Leaf.aggregate_to_daily(Hourly_Soil_Rad,  Day_Length)
-            self.Day_Air_Soil_temp_dif=(Hourly_Air_Soil_temp_dif * wgauss).sum()
+            # # Aggregate Hourly data back to daily totals
+            # self.potential_SoilRad_daily = Leaf.Leaf.aggregate_to_daily(Hourly_Soil_Rad,  Day_Length)
+            # self.Day_Air_Soil_temp_dif=(Hourly_Air_Soil_temp_dif * wgauss).sum()
     
 
   
-    # def Update_Evaporation_if_WaterStress(self, Solar_Constant, Sin_Solar_Declination, Cos_Solar_Declination, Day_Length, Daily_Sin_Beam_Exposure, daily_water_supply, Root_Depth, Hourly_transpiration_Sunlit, Hourly_transpiration_Shaded, Hourly_Soil_Evap):
-    #     gaussian_points = 5
-    #     gaussian_weights_x = np.array([0.0469101, 0.2307534, 0.5000000, 0.7692465, 0.9530899])
-    #     gaussian_weights_w = np.array([0.1184635, 0.2393144, 0.2844444, 0.2393144, 0.1184635])
-    #     Latent_Heat_of_Vaporization = 2.4E6  # J/kg
-    #     Volumetric_Heat_Capacity_Air = 1200  # J/m^3/°C
-
-    #     Hourly_Actual_Soil_Evap = []
-    #     Hourly_Air_Soil_Temperature_Difference = []
-    #     # water_supply_for_evaporation = self.water_supply_for_evaporation
-    #     # print('next')
-    #     for i, potential_evaporation_soil, sunlit_transpiration, shaded_transpiration, Hourly_Soil_Rad, layer_resistance, turbulence_resistance in zip(range(gaussian_points), Hourly_Soil_Evap, Hourly_transpiration_Sunlit, Hourly_transpiration_Shaded, self.Hourly_Soil_Rad, self.Hourly_boundary_layer_resistance_soil, self.Hourly_turbulence_resistance_soil):
-    #         hour = 12 - 0.5 * Day_Length + Day_Length * gaussian_weights_x[i]
-    #         Hourly_sin_beam = max(0., Sin_Solar_Declination + Cos_Solar_Declination * np.cos(2. * np.pi * (hour - 12.) / 24.))
-
-    #         # Diurnal availability of soil water supply
-    #         water_supply_Hourly = self.water_supply_for_evaporation * (Hourly_sin_beam * Solar_Constant / 1367) / Daily_Sin_Beam_Exposure
-    #         # water_supply_for_evaporation = water_supply_Hourly * self.Top_Layer_Depth / Root_Depth
-    #         water_supply_for_evaporation = water_supply_Hourly *self.evaporation_depth/ Root_Depth
-
-    #         # print( Day_Length*3600*(Hourly_sin_beam * Solar_Constant / 1367) / Daily_Sin_Beam_Exposure)
-    #         # print((Hourly_Solar_Radiation/Solar_Radiation)*Day_Length*3600)
-
-    #         # Transpiration from the top soil layer
-    #         potential_transpiration_from_evaporative_soil_layer  = (shaded_transpiration + sunlit_transpiration) * self.evaporation_depth / Root_Depth
-    #         # print(water_supply_for_evaporation ,potential_evaporation_soil,potential_evaporation_soil / (potential_transpiration_from_evaporative_soil_layer + potential_evaporation_soil) * water_supply_for_evaporation)
-
-    #         # Maximum possible evaporation
-    #         Actual_Soil_Evap = min(potential_evaporation_soil, potential_evaporation_soil / (potential_transpiration_from_evaporative_soil_layer + potential_evaporation_soil) * water_supply_for_evaporation)
-    #         # water_supply_for_evaporation-=Actual_Soil_Evap
-    #         # water_supply_for_evaporation=max(0,water_supply_for_evaporation)
-    #         # print(water_supply_for_evaporation ,self.water_supply_for_evaporation)
-
-    #         # print(Actual_Soil_Evap)
-
-    #         Actual_Air_Soil_Temperature_Difference = self.Limit_Function(-25., 25., (Hourly_Soil_Rad - Latent_Heat_of_Vaporization * Actual_Soil_Evap) * (layer_resistance + turbulence_resistance) / Volumetric_Heat_Capacity_Air)
-    #         Hourly_Air_Soil_Temperature_Difference.append(Actual_Air_Soil_Temperature_Difference)
-    #         Hourly_Actual_Soil_Evap.append(Actual_Soil_Evap)
-    #         #print(Actual_Air_Soil_Temperature_Difference)
-    #     # print('Next day')
-    #     self.Hourly_Actual_Soil_Evap = Hourly_Actual_Soil_Evap
-    #     # Aggregation to daily air-soil temperature difference and actual daily evaporation
-    #     self.Day_Air_Soil_temp_dif = (Hourly_Air_Soil_Temperature_Difference* gaussian_weights_w).sum()
-    #     # Assuming `aggregate_to_daily` is a method that sums or averages Hourly data to a daily total
-    #     self.Actual_Daily_Evaporation = Leaf.Leaf.aggregate_to_daily(Hourly_Actual_Soil_Evap, Day_Length)
-    #     #print(self.Day_Air_Soil_temp_dif)
-
-
 
 
 
@@ -829,8 +818,6 @@ class Soil:
         # Calculate the rate of change in soil temperature
         rate_of_change_soil_temp = (average_soil_temperature - self.Soil_Temperature) / self.temperature_change_T
         
-        # Print the rate of change in soil temperature for debugging or information purposes
-        # print(rate_of_change_soil_temp)
         
         # Update class attributes with the new calculated values
         self.average_soil_temperature = average_soil_temperature
@@ -839,28 +826,34 @@ class Soil:
 
 
 
-    def Calculate_Water_Balance(self,irrigation_amount,Actual_Canopy_Transpiration,Root_Depth):
+    def Calculate_Water_Balance(self,irrigation_amount,Potential_Canopy_Transpiration,Potential_evaporation,Root_Depth):
+        _, _, _, _,_,soil_moisture_array=self.run_soil_water_model(1,irrigation_amount,  0, 0, Root_Depth  )
 
-      
-        soil_moisture_array, water_content_array, Root_zone_avg_soil_moisture, Root_zone_avg_water_content,Root_zone_plant_avail_water=self.soil_water_balance(1,self.Soil_Layer_Property, self.planting_depth, self.num_intervals, self.number_of_layers,
-                                                               Root_Depth,   irrigation_amount, Actual_Canopy_Transpiration, self.Actual_Daily_Evaporation )
+        # print(soil_moisture_array)
+        plantwc, evapowc, Root_zone_avg_water_content, Root_zone_avg_soil_moisture,water_content_array,soil_moisture_array=self.run_soil_water_model(1,irrigation_amount,  Potential_Canopy_Transpiration, Potential_evaporation, Root_Depth,  )
+        # print(784,soil_moisture_array,irrigation_amount,
+        #       self.Actual_Daily_Evaporation, self.water_supply_for_evaporation,
+        #       Actual_Canopy_Transpiration,self.water_supply_for_Transpiration,Root_Depth)
+
 
         total_water_soil_profile=0
         total_depth=0
-        for j, layer in enumerate(self.Soil_Layer_Property['layers']):
+        
+        for j, layer in enumerate(self.layers):
             if j==0:
-                layer['Soil_Moisture']=soil_moisture_array[j]
-                continue
+                layer['vwc']=soil_moisture_array[j]
             else:
-                layer['Soil_Moisture']=soil_moisture_array[j]
-                total_water_soil_profile+=layer['Soil_Moisture']*layer['Layer_Thickness']
-                total_depth+=layer['Layer_Thickness']
-                average_soil_moisture_soil_profile=total_water_soil_profile/total_depth
-
+                layer['vwc']=soil_moisture_array[j]
+                total_water_soil_profile+=layer['vwc']*layer['thick']
+                total_depth+=layer['thick']
+                
+        average_soil_moisture_soil_profile=total_water_soil_profile/total_depth
         below_root_zone_water_content=total_water_soil_profile-Root_zone_avg_water_content/1000
+
+        
         self.average_below_root_zone_moisture=below_root_zone_water_content/(self.total_depth-Root_Depth-self.Evaporative_Depth)
-        self.average_root_zone_water_content=Root_zone_avg_water_content #m
-        self.water_supply_for_Transpiration=Root_zone_plant_avail_water #m
+        self.average_root_zone_water_content=Root_zone_avg_water_content #mm
+        self.water_supply_for_Transpiration=plantwc #mm
         self.average_root_zone_moisture=Root_zone_avg_soil_moisture
         self.average_soil_moisture_soil_profile=average_soil_moisture_soil_profile
         # self.average_below_root_zone_moisture=100*self.average_below_root_zone_water_content/(self.total_depth-Root_Depth)
@@ -946,7 +939,6 @@ class Soil:
         nitrogen_uptake = max(0, ammonium_nitrogen_uptake + nitrate_nitrogen_uptake + min(nitrogen_demand, NitrogenFixation_Reserve_Pool_ChangeRate / self.temperature_change_constant))
         
         # Debugging print statements can be commented out or removed in production
-        # print(ammonium_nitrogen_uptake, nitrate_nitrogen_uptake, nitrogen_demand, NitrogenFixation_Reserve_Pool_ChangeRate, self.temperature_change_constant)
         
         # Update class attributes with the calculated values
         self.nitrogen_uptake = nitrogen_uptake
