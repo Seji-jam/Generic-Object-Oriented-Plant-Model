@@ -760,11 +760,11 @@ class Leaf_sunlit(Leaf):
                                                        C3C4_Pathway):
           
         
-        # print(771,'Daily_Potential_Transpiration_Sunlit', self.Daily_Potential_Transpiration_Sunlit)
-
         Water_Stress_Fraction=Actual_Canopy_Transpiration/Potential_Canopy_Transpiration
-        Actual_Transpiration_Sunlit_Instant_List=np.array(self.Hourly_Transpiration_Sunlit)*round(Water_Stress_Fraction,2)
-        # print('leaf 768',Water_Stress_Fraction,Actual_Transpiration_Sunlit)
+        Actual_Transpiration_Sunlit_Instant_List=np.array(self.Hourly_Transpiration_Sunlit)*round(Water_Stress_Fraction,4)
+
+        
+        # print('leaf 768',Water_Stress_Fraction,Actual_Transpiration_Sunlit_Instant_List)
 
         # check_actual = Leaf.aggregate_to_daily(Actual_Transpiration_Sunlit_Instant_List, Day_Length)
         # check_potential = Leaf.aggregate_to_daily(self.Hourly_Transpiration_Sunlit, Day_Length)
@@ -866,10 +866,15 @@ class Leaf_sunlit(Leaf):
             Temperature_Difference=max(-25, min(Temperature_Difference, 25)) 
 
             Adjusted_Leaf_Temperature = Hourly_Temp + Temperature_Difference
-                        
-            # Adjusting stomatal resistance to water under water stress conditions
-            Adjusted_Stomatal_Resistance_Water = (Potential_Transpiration_Sunlit - Actual_Transpiration_Sunlit) * (Slope_VPD * (Boundary_Layer_Resistance_Heat_Sunlit + Turbulence_Resistance_Sunlit) + Psychrometric_Constant * (Boundary_Layer_Resistance_Water_Sunlit + Turbulence_Resistance_Sunlit)) / Actual_Transpiration_Sunlit / Psychrometric_Constant + Potential_Transpiration_Sunlit / Actual_Transpiration_Sunlit * Stomatal_Resistance_Water_Sunlit
-            
+            # if Actual_Transpiration_Sunlit ==0:
+            #     print(Actual_Transpiration_Sunlit,
+            #             Water_Stress_Fraction,Actual_Canopy_Transpiration,Potential_Canopy_Transpiration,
+            #             Actual_Transpiration_Sunlit_Instant_List,Hourly_Transpiration_Sunlit,round(Water_Stress_Fraction,4))
+
+            #     Actual_Transpiration_Sunlit=1e-10
+            # # Adjusting stomatal resistance to water under water stress conditions
+            Adjusted_Stomatal_Resistance_Water = (Potential_Transpiration_Sunlit - Actual_Transpiration_Sunlit) * (Slope_VPD * (Boundary_Layer_Resistance_Heat_Sunlit + Turbulence_Resistance_Sunlit)  + Psychrometric_Constant * (Boundary_Layer_Resistance_Water_Sunlit + Turbulence_Resistance_Sunlit)) / Actual_Transpiration_Sunlit / Psychrometric_Constant + Potential_Transpiration_Sunlit / Actual_Transpiration_Sunlit * Stomatal_Resistance_Water_Sunlit
+
             # Absorbed PAR calculation for sunlit leaves
             Absorbed_PAR_Sunlit, _ = Leaf.LIGHT_ABSORB(Scattering_Coefficient_PAR, Direct_Beam_Extinction_Coefficient, Scattered_Beam_Extinction_Coefficient_PAR, Diffuse_Extinction_Coefficient_PAR, Canopy_Beam_Reflection_Coefficient_PAR, Canopy_Diffuse_Reflection_Coefficient_PAR, Direct_PAR, Diffuse_PAR, Leaf_Area_Index)
             

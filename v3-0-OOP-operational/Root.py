@@ -30,6 +30,7 @@ class Root:
         Extinction_coefficient_root_N  = -np.log(0.05) / 6.3424 / CarbonFrac_Veg / self.Critical_root_weight_density / self.max_root_depth
         nitrogen_determined_Root_Carbon = 1 / Extinction_coefficient_root_N * math.log(1.0 + Extinction_coefficient_root_N * max(0.0, (Nitrogen_Root * CarbonFrac_Veg - ReserveRoot_Carbon * MinRootN_Conc)) / MinRootN_Conc)
         Root_carbon_loss_rate_senescence = max(min(Root_Carbon - 1.0e-4, Root_Carbon - min(nitrogen_determined_Root_Carbon, Root_Carbon)), 0.0) / self.Model_TimeStep
+        # print(Root_carbon_loss_rate_senescence)
         weight_roots_living = Root_carbon_loss_rate_senescence / CarbonFrac_Veg
         Root_nitrogen_loss_rate_senescence = weight_roots_living * MinRootN_Conc
         self.weight_roots_living = weight_roots_living

@@ -530,7 +530,9 @@ class Soil:
         self._rootzone_water()
         self.Actual_Daily_Evaporation=total_ei*1000
         self.Actual_Daily_Transpiration=total_ti*1000
-        # print('Soil 533','A_evap',total_ei,'A_tranpiration',total_ti, 'PT',petcrop)
+        if self.Actual_Daily_Transpiration <= 0:
+            self.Actual_Daily_Transpiration = 1e-10
+        # print('Soil 535','A_evap',total_ei,'A_tranpiration',total_ti, 'PT',petcrop)
 
     def daily_water_balance(self, rain, petcrop, petsoil,rootdepth):
         self.netrain = rain

@@ -101,6 +101,8 @@ Leaf_object=Leaf.Leaf( Inputs.SLA_Const, Inputs.Min_Specific_Leaf_N, Inputs.Leaf
 output_manager = OutputManager()
 output_manager.write_header(output_manager.format_header(Soil_object))
 
+
+variable_check=[]
 # Iterate over each timestep's weather data
 for day_data in weather_data[:]:
     if Canopy_object.Development_Stage > 2:
@@ -296,22 +298,24 @@ for day_data in weather_data[:]:
     # Canopy processes for Carbon flow and partitioning
     # =============================================================================
     
+    
+
     Canopy_object.Calculate_Carbon_Flow()
 
     Canopy_object.Calculate_Carbon_Flow_Seed_Filling()
 
     Canopy_object.Calculate_Carbon_Flow_Stem_Growth()
-
+    
     Root_object.Calculate_Root_Senescence(Canopy_object.Root_Carbon,Canopy_object.CarbonFrac_Veg, Canopy_object.MinRootN_Conc, Canopy_object.Root_CarbonReserve, Canopy_object.Nitrogen_Root)
 
-
     Canopy_object.Calculate_Carbon_Partitioning(Leaf_object.Leaf_area_output['N_determined_LAI'],Canopy_object.Carbon_determined_LAI, Root_object.nitrogen_determined_Root_Carbon)
+    
+    Canopy_object.Calculate_Carbon_Production_Rate(Root_object.Root_carbon_loss_rate_senescence)
     
     
     Canopy_object.Update_Carbon_Reserve_Pools()
     
     
-    Canopy_object.Calculate_Carbon_Production_Rate(Root_object.Root_carbon_loss_rate_senescence)
     
     Canopy_object.Calculate_Biomass_Change_Rate()
     
@@ -376,7 +380,9 @@ for day_data in weather_data[:]:
     # =============================================================================
     formatted_data = output_manager.format_data(day_data, Canopy_object, Leaf_object, Root_object, Soil_object)
     output_manager.append_data(formatted_data)
-
+    
+    df_check=pd.DataFrame({'Development_Stage':[Canopy_object.Development_Stage],'Fraction_Nitrogen_to_Shoot':Canopy_object.Fraction_Nitrogen_to_Shoot})
+    variable_check.append(df_check)
 
 # =============================================================================
 # 
@@ -391,51 +397,108 @@ results['Date'] = pd.to_datetime(results['Year'].astype(int).astype(str) + resul
 measured_height_approximations = pd.DataFrame({'Date': ['2023-08-03','2023-08-31'], 'Plant_Height': [.6,.7]})
 measured_height_approximations['Date'] = pd.to_datetime(measured_height_approximations['Date'])
 
-sns.lineplot(x=results['Date'],y=results['Plant_Height'])
-sns.scatterplot(x=measured_height_approximations['Date'],y=measured_height_approximations['Plant_Height'])
-
-fig, ax = plt.subplots(figsize=(12, 8))
-ax2 = ax.twinx()
-sns.scatterplot(x=results['Date'],y=results['Rain'],ax=ax2)
-sns.lineplot(x=results['Date'],y=results['soil_moisture_1'],ax=ax)
-
-
-fig, ax = plt.subplots(figsize=(12, 8))
-sns.lineplot(x=results['Date'],y=results['Root_Depth'])
-
-fig, ax = plt.subplots(figsize=(12, 8))
-sns.lineplot(x=results['Date'],y=results['soil_moisture_2'])
-sns.lineplot(x=results['Date'],y=results['soil_moisture_3'],color='red')
-ax2 = ax.twinx()
-sns.scatterplot(x=results['Date'],y=results['Rain'],ax=ax2)
-
-
-fig, ax = plt.subplots(figsize=(12, 8))
-sns.lineplot(x=results['Date'],y=results['soil_moisture_5'])
-
-fig, ax = plt.subplots(figsize=(12, 8))
-sns.lineplot(x=results['Date'],y=results['Nitrogen_Leaf'])
-
-fig, ax = plt.subplots(figsize=(12, 8))
-sns.lineplot(x=results['Date'],y=results['Potential_Canopy_Transpiration'],color='red')
-sns.lineplot(x=results['Date'],y=results['Actual_Canopy_Transpiration'],color='blue')
-
-fig, ax = plt.subplots(figsize=(12, 8))
-sns.lineplot(x=results['Date'],y=results['Potential_Canopy_Photosynthesis'],color='red')
-sns.lineplot(x=results['Date'],y=results['Actual_Canopy_Photosynthesis'],color='blue')
-
-
-fig, ax = plt.subplots(figsize=(12, 8))
-sns.lineplot(x=results['Date'],y=results['Actual_Daily_Evaporation'],color='blue')
-
 results.columns
 
 
-import os
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import re
+variable_check=pd.concat(variable_check,axis=0,ignore_index=True)
+
+
+fig, ax = plt.subplots(figsize=(12, 8))
+sns.lineplot(x=variable_check['Development_Stage'],y=variable_check['Fraction_Nitrogen_to_Shoot'],color='brown',ax=ax)
+fig, ax = plt.subplots(figsize=(12, 8))
+sns.lineplot(x=results['Development_Stage'],y=results['LAI'],color='brown',ax=ax)
+
+
+# fig, ax = plt.subplots(figsize=(12, 8))
+# sns.lineplot(x=results['Development_Stage'],y=results['Fraction_Stem_Carbon'],color='brown',ax=ax)
+# sns.lineplot(x=results['Development_Stage'],y=results['Fraction_Seed_Carbon'],color='k',ax=ax)
+# sns.lineplot(x=results['Development_Stage'],y=results['Fraction_Leaf_Carbon'],color='green',ax=ax)
+#         # self.Leaf_Carbon_ChangeRate = 12.0 / 44.0 * self.Photo_Assimilate *
+#         # self.Fraction_Carbon_to_Shoot * self.Fraction_Leaf_Carbon *
+#         # self.Growth_Efficiency_Veg - self.Leaf_Carbon_Loss_ChangeRate
+
+# fig, ax = plt.subplots(figsize=(12, 8))
+# sns.lineplot(x=results['Development_Stage'],y=results['Carbon_Flow_to_Stem'],color='brown',ax=ax)
+
+# fig, ax = plt.subplots(figsize=(12, 8))
+# sns.lineplot(x=results['Development_Stage'],y=results['Relative_Shoot_Activity'],color='brown',ax=ax)
+
+
+# fig, ax = plt.subplots(figsize=(12, 8))
+# sns.lineplot(x=results['Development_Stage'],y=results['Carbon_Shoot'],color='brown',ax=ax)
+
+# fig, ax = plt.subplots(figsize=(12, 8))
+# sns.lineplot(x=results['Development_Stage'],y=results['Root_Carbon'],color='brown',ax=ax)
+
+# fig, ax = plt.subplots(figsize=(12, 8))
+# sns.lineplot(x=results['Development_Stage'],y=results['nitrogen_determined_Root_Carbon'],color='brown',ax=ax)
+
+# fig, ax = plt.subplots(figsize=(12, 8))
+# sns.lineplot(x=results['Development_Stage'],y=results['Nitrogen_Root'],color='brown',ax=ax)
+
+# fig, ax = plt.subplots(figsize=(12, 8))
+# sns.lineplot(x=results['Development_Stage'],y=results['Root_CarbonReserve'],color='brown',ax=ax)
+
+# # Specific_Leaf_N_Top,\
+# # Nitrogen_Demand_Activity_Driven,\
+
+# fig, ax = plt.subplots(figsize=(12, 8))
+# sns.lineplot(x=results['Development_Stage'],y=results['Nitrogen_Demand_Activity_Driven'],color='brown',ax=ax)
+
+# fig, ax = plt.subplots(figsize=(12, 8))
+# sns.lineplot(x=results['Development_Stage'],y=results['Nitrogen_uptake'],color='brown',ax=ax)
+
+
+# fig, ax = plt.subplots(figsize=(12, 8))
+# sns.lineplot(x=results['Development_Stage'],y=results['Total_Nitrogen_uptake'],color='brown',ax=ax)
+
+
+
+# sns.lineplot(x=results['Date'],y=results['Plant_Height'])
+# sns.scatterplot(x=measured_height_approximations['Date'],y=measured_height_approximations['Plant_Height'])
+
+# fig, ax = plt.subplots(figsize=(12, 8))
+# ax2 = ax.twinx()
+# sns.scatterplot(x=results['Date'],y=results['Rain'],ax=ax2)
+# sns.lineplot(x=results['Date'],y=results['soil_moisture_1'],ax=ax)
+
+
+# fig, ax = plt.subplots(figsize=(12, 8))
+# sns.lineplot(x=results['Date'],y=results['Root_Depth'])
+
+# fig, ax = plt.subplots(figsize=(12, 8))
+# sns.lineplot(x=results['Date'],y=results['soil_moisture_2'])
+# sns.lineplot(x=results['Date'],y=results['soil_moisture_3'],color='red')
+# ax2 = ax.twinx()
+# sns.scatterplot(x=results['Date'],y=results['Rain'],ax=ax2)
+
+
+# fig, ax = plt.subplots(figsize=(12, 8))
+# sns.lineplot(x=results['Date'],y=results['soil_moisture_5'])
+
+# fig, ax = plt.subplots(figsize=(12, 8))
+# sns.lineplot(x=results['Date'],y=results['Nitrogen_Leaf'])
+
+# fig, ax = plt.subplots(figsize=(12, 8))
+# sns.lineplot(x=results['Date'],y=results['Potential_Canopy_Transpiration'],color='red')
+# sns.lineplot(x=results['Date'],y=results['Actual_Canopy_Transpiration'],color='blue')
+
+# fig, ax = plt.subplots(figsize=(12, 8))
+# sns.lineplot(x=results['Date'],y=results['Potential_Canopy_Photosynthesis'],color='red')
+# sns.lineplot(x=results['Date'],y=results['Actual_Canopy_Photosynthesis'],color='blue')
+
+
+# fig, ax = plt.subplots(figsize=(12, 8))
+# sns.lineplot(x=results['Date'],y=results['Actual_Daily_Evaporation'],color='blue')
+
+# results.columns
+
+
+# import os
+# import pandas as pd
+# import matplotlib.pyplot as plt
+# import seaborn as sns
+# import re
 
 
 file_path_csv = r'D:\Trees\trees272_corrected\LAI_measured_data.csv'
@@ -470,7 +533,7 @@ simulated_data.columns
 
 fig, ax = plt.subplots(figsize=(12, 8))
 sns.lineplot(x='Date', y='LAI', data=simulated_data, linewidth=2,
-             linestyle='-', color='k', label='Simulated LAI', ax=ax)
+              linestyle='-', color='k', label='Simulated LAI', ax=ax)
 
 eb1 = ax.errorbar(
     x=measured_data_avg_lai['Date'], 
