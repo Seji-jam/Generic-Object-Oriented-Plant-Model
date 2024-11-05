@@ -75,6 +75,12 @@
         .sub-stage.prototype { background-color: #fffde7; } /* Yellow background for prototype stage */
         .sub-stage.debugging { background-color: #ffebee; } /* Red background for debugging stage */
 
+        /* Custom Styling for Taller Boxes */
+        .tall-box {
+            min-height: 100px; /* Increase vertical height */
+            padding: 20px 15px; /* Increase padding */
+        }
+
         /* Staggering Phase Containers */
         .phase-container-b { margin-top: 250px; }
         .phase-container-c { margin-top: 300px; }
@@ -175,13 +181,13 @@
             <div class="details" id="approach2-details">
                 <p>After evaluating the base model from Approach I, we identified areas for improvement. Through discussions with Sajad, Diane, and Bryan Runk (University of Minnesota), we developed a new concept called the “Resource Pool, Priority Queue” (RP-PQ) to redesign the model.</p>
             </div>
-            <div class="sub-stage" onclick="toggleDetails('approach2-stage1-details')">
+            <div class="sub-stage tall-box" onclick="toggleDetails('approach2-stage1-details')">
                 <h5>Stage 1: Discussing RP-PQ principles and concepts</h5>
             </div>
             <div class="details" id="approach2-stage1-details">
                 <p>Conceptual discussions on the Resource Pool and Priority Queue.</p>
             </div>
-            <div class="sub-stage" onclick="toggleDetails('approach2-stage2-details')">
+            <div class="sub-stage tall-box" onclick="toggleDetails('approach2-stage2-details')">
                 <h5>Stage 2: Testing initial RP-PQ implementation</h5>
             </div>
             <div class="details" id="approach2-stage2-details">
@@ -191,8 +197,10 @@
                 <h5>Stage 3: Building the initial RP-PQ prototype</h5>
             </div>
             <div class="details" id="approach2-stage3-details">
-                <p>Developing a simplified prototype of the RP-PQ model. latest update: we developed the very first version in Google Colab.
-				We are currently running some scenarios to show how the RP-PQ concept works. This would be used in Diane's talk in ASA, CSSA & SSSA</p>
+                <p>Developing a simplified prototype of the RP-PQ model.
+				latest update: we developed the very first version in Google Colab. 
+				We are currently running some scenarios to show how the RP-PQ concept works.
+				This would be used in Diane's talk in ASA, CSSA & SSSA.</p>
             </div>
         </div>
 
@@ -239,9 +247,10 @@
                 <h5>Stage 6: Debugging model runs due to incomplete executions</h5>
             </div>
             <div class="details" id="approach3-stage6-details">
-                <p>We are facing issues with their model hanging during sensitivity analysis runs on an HPC. 
-				Kelly reports a high failure rate due to specific parameter sets, suggesting adjustments to parameter ranges
-				and timeouts to improve completion rates. We plan to discuss these challenges and possible solutions.</p>
+                <p>We are facing issues with their model hanging during sensitivity analysis runs on an HPC.
+				Kelly reports a high failure rate due to specific parameter sets, 
+				suggesting adjustments to parameter ranges and timeouts to improve completion rates. 
+				We plan to discuss these challenges and possible solutions.</p>
             </div>
         </div>
     </div>
