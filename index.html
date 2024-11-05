@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Summary Dashboard</title>
+    <style>
+        /* General Styling */
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f9fafc; color: #333; }
+        h1 { color: #2c3e50; text-align: center; font-size: 2em; }
+
+        /* Phase and Sub-Stage Box Styling */
+        .phase, .sub-stage {
+            width: 100%;
+            max-width: 400px;
+            padding: 10px 15px;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: box-shadow 0.3s ease;
+            margin: 0 auto;
+            cursor: pointer;
+        }
+        .phase:hover, .sub-stage:hover { box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); }
+
+        /* Title Styling */
+        .phase h4, .sub-stage h5 {
+            margin: 0;
+            color: #2980b9;
+            font-size: 1.3em;
+            text-align: center;
+        }
+        .sub-stage h5 {
+            font-size: 1em;
+            color: #7f8c8d;
+        }
+
+        /* Details Styling */
+        .details {
+            display: none;
+            font-size: 0.85em;
+            margin-top: 5px;
+            color: #555;
+        }
+
+        /* Parallel Phases Styling */
+        .parallel-container {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .phase-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 400px;
+            margin-top: 20px;
+        }
+
+        /* Sub-Stage Styling */
+        .sub-stage {
+            margin-top: 10px;
+            padding: 8px 15px;
+            background-color: #f1f2f6;
+            border-left: 3px solid #2980b9;
+            font-size: 0.85em;
+        }
+        .sub-stage.completed {
+            border-left-color: #27ae60;
+        }
+        .sub-stage.finalized { background-color: #e8f5e9; } /* Green background for finalized stage */
+        .sub-stage.prototype { background-color: #fffde7; } /* Yellow background for prototype stage */
+        .sub-stage.debugging { background-color: #ffebee; } /* Red background for debugging stage */
+
+        /* Staggering Phase Containers */
+        .phase-container-b { margin-top: 250px; }
+        .phase-container-c { margin-top: 300px; }
+
+    </style>
+    <script>
+        function toggleDetails(id) {
+            const details = document.getElementById(id);
+            details.style.display = details.style.display === 'none' ? 'block' : 'none';
+        }
+    </script>
+</head>
+<body>
+    <h1>Project Summary Dashboard</h1>
+    
+    <!-- Main Stages (Phases 1 to 3) -->
+    <div class="phase" onclick="toggleDetails('stage1-details')">
+        <h4>Stage 1: Review Theory</h4>
+        <p>Fall 2022</p>
+    </div>
+    <div class="details" id="stage1-details">
+        <p>During this stage, our lab (Dr. Wang’s lab) studied and reviewed a book titled <em>Introduction to Mathematical Modeling of Crop Growth: How the Equations are Derived and Assembled into a Computer Program</em> by Christopher Teh. This provided foundational insights into crop modeling.</p>
+    </div>
+
+    <div class="phase" onclick="toggleDetails('stage2-details')">
+        <h4>Stage 2: Translation of a Toy Model</h4>
+        <p>Spring 2023</p>
+    </div>
+    <div class="details" id="stage2-details">
+        <p>In this stage, a sample model presented in the book was converted from C++ to Python. This hands-on exercise allowed us to understand and explore various components of crop modeling more interactively.</p>
+    </div>
+    
+    <div class="phase" onclick="toggleDetails('stage3-details')">
+        <h4>Stage 3: Theoretical Development and Designing Model Principles</h4>
+        <p>Summer/Fall 2023</p>
+    </div>
+    <div class="details" id="stage3-details">
+        <p>During this stage, Dr. Wang’s lab first discussed the principles required to develop a simple yet flexible base model that could serve multiple applications. Based on these principles, we reviewed the literature to select equations and representations aligning with our approach in developing different components of our process-based model.</p>
+    </div>
+
+    <!-- Modeling Approaches -->
+    <h2 style="text-align: center; color: #2c3e50;">Modeling Approaches</h2>
+    <div class="parallel-container">
+        
+        <!-- Approach I with Aligned Sub-Stages -->
+        <div class="phase-container">
+            <div class="phase" onclick="toggleDetails('approach1-details')">
+                <h4>Approach I: Developing the Code and Model in Python</h4>
+                <p>Fall 2023/Spring 2024</p>
+            </div>
+            <div class="details" id="approach1-details">
+                <p>During this stage, we developed a Python code based on the information gathered in Stage 3. All equations were implemented in an object-oriented manner to align with our established principles.</p>
+            </div>
+            <div class="sub-stage completed" onclick="toggleDetails('approach1-stage1-details')">
+                <h5>Stage 1: Converting all code to Python in an object-oriented structure and developing various modules</h5>
+            </div>
+            <div class="details" id="approach1-stage1-details">
+                <p>Conversion of C++ code to Python while maintaining an object-oriented structure for modularity.</p>
+            </div>
+            <div class="sub-stage" onclick="toggleDetails('approach1-stage2-details')">
+                <h5>Stage 2: Integrating modules and testing the model</h5>
+            </div>
+            <div class="details" id="approach1-stage2-details">
+                <p>Testing integration of all modules to ensure functional flow.</p>
+            </div>
+            <div class="sub-stage" onclick="toggleDetails('approach1-stage3-details')">
+                <h5>Stage 3: Debugging the code</h5>
+            </div>
+            <div class="details" id="approach1-stage3-details">
+                <p>Fixing identified errors in the model to achieve stable results.</p>
+            </div>
+            <div class="sub-stage" onclick="toggleDetails('approach1-stage4-details')">
+                <h5>Stage 4: Testing with cotton data from Arizona’s 2023 growing season</h5>
+            </div>
+            <div class="details" id="approach1-stage4-details">
+                <p>Applying model to cotton data for validation and fine-tuning.</p>
+            </div>
+            <div class="sub-stage" onclick="toggleDetails('approach1-stage5-details')">
+                <h5>Stage 5: Refining code and adding features to enhance model performance</h5>
+            </div>
+            <div class="details" id="approach1-stage5-details">
+                <p>Implemented additional functionalities and optimized code for efficiency.</p>
+            </div>
+            <div class="sub-stage finalized" onclick="toggleDetails('approach1-stage6-details')">
+                <h5>Stage 6: Finalizing the model</h5>
+            </div>
+            <div class="details" id="approach1-stage6-details">
+                <p>The model was finalized and prepared for application.</p>
+            </div>
+        </div>
+
+        <!-- Approach II with Aligned Sub-Stages -->
+        <div class="phase-container phase-container-b">
+            <div class="phase" onclick="toggleDetails('approach2-details')">
+                <h4>Approach II: Refactoring and Redesigning for Flexibility and Generality</h4>
+                <p>Spring 2024/Fall 2024</p>
+            </div>
+            <div class="details" id="approach2-details">
+                <p>After evaluating the base model from Approach I, we identified areas for improvement. Through discussions with Sajad, Diane, and Bryan Runk (University of Minnesota), we developed a new concept called the “Resource Pool, Priority Queue” (RP-PQ) to redesign the model.</p>
+            </div>
+            <div class="sub-stage" onclick="toggleDetails('approach2-stage1-details')">
+                <h5>Stage 1: Discussing RP-PQ principles and concepts</h5>
+            </div>
+            <div class="details" id="approach2-stage1-details">
+                <p>Conceptual discussions on the Resource Pool and Priority Queue.</p>
+            </div>
+            <div class="sub-stage" onclick="toggleDetails('approach2-stage2-details')">
+                <h5>Stage 2: Testing initial RP-PQ implementation</h5>
+            </div>
+            <div class="details" id="approach2-stage2-details">
+                <p>Implementing and testing early parts of the model for feasibility.</p>
+            </div>
+            <div class="sub-stage prototype" onclick="toggleDetails('approach2-stage3-details')">
+                <h5>Stage 3: Building the initial RP-PQ prototype</h5>
+            </div>
+            <div class="details" id="approach2-stage3-details">
+                <p>Developing a simplified prototype of the RP-PQ model. latest update: we developed the very first version in Google Colab.
+				We are currently running some scenarios to show how the RP-PQ concept works. This would be used in Diane's talk in ASA, CSSA & SSSA</p>
+            </div>
+        </div>
+
+        <!-- Approach III with Aligned Sub-Stages -->
+        <div class="phase-container phase-container-c">
+            <div class="phase" onclick="toggleDetails('approach3-details')">
+                <h4>Approach III: Using the TREES Model for Alternate Approach and Model Inversion</h4>
+                <p>Summer 2024/Fall 2024</p>
+            </div>
+            <div class="details" id="approach3-details">
+                <p>The TREES 2.72 model was employed to simulate the cotton experiment in Arizona and to serve as a basis for model inversion.</p>
+            </div>
+            <div class="sub-stage" onclick="toggleDetails('approach3-stage1-details')">
+                <h5>Stage 1: Driver and input file development by Duke's group</h5>
+            </div>
+            <div class="details" id="approach3-stage1-details">
+                <p>Initial model setup was done by Duke's group and then transferred to Diane's group.</p>
+            </div>
+            <div class="sub-stage" onclick="toggleDetails('approach3-stage2-details')">
+                <h5>Stage 2: Model setup and parameterization</h5>
+            </div>
+            <div class="details" id="approach3-stage2-details">
+                <p>Adjusted and parameterized the model to fit experimental data.</p>
+            </div>
+            <div class="sub-stage" onclick="toggleDetails('approach3-stage3-details')">
+                <h5>Stage 3: Species-level testing with genotype data</h5>
+            </div>
+            <div class="details" id="approach3-stage3-details">
+                <p>Testing the model using averaged data from different genotypes.</p>
+            </div>
+            <div class="sub-stage" onclick="toggleDetails('approach3-stage4-details')">
+                <h5>Stage 4: General Sensitivity Analysis (GSA) setup for model inversion</h5>
+            </div>
+            <div class="details" id="approach3-stage4-details">
+                <p>Preparing the model for GSA as part of model inversion analysis with Kelly.</p>
+            </div>
+            <div class="sub-stage" onclick="toggleDetails('approach3-stage5-details')">
+                <h5>Stage 5: GSA parameter list development and HPC runs with Kelly</h5>
+            </div>
+            <div class="details" id="approach3-stage5-details">
+                <p>Defined parameter list and conducted HPC runs for GSA (Kelly).</p>
+            </div>
+            <div class="sub-stage debugging" onclick="toggleDetails('approach3-stage6-details')">
+                <h5>Stage 6: Debugging model runs due to incomplete executions</h5>
+            </div>
+            <div class="details" id="approach3-stage6-details">
+                <p>We are facing issues with their model hanging during sensitivity analysis runs on an HPC. 
+				Kelly reports a high failure rate due to specific parameter sets, suggesting adjustments to parameter ranges
+				and timeouts to improve completion rates. We plan to discuss these challenges and possible solutions.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
