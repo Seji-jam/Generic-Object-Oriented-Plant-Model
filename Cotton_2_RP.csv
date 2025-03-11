@@ -1,0 +1,3 @@
+﻿name,thermal_time_initiation,allocation_priority,max_size,initial_size,rate
+Leaves,50,1,38.6,0.005,0.012
+Canopy,1,2,277,10.17,0.0028
